@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>КиберЩит</title>
+<meta name="description" content="Игры и задания о безопасности в интернете для детей и подростков">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b5cf0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Oswald:wght@600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<canvas id="rain" aria-hidden="true"></canvas>
+<button id="theme" class="theme-btn" title="Сменить тему" aria-label="Сменить тему"><i data-lucide="moon"></i></button>
+
+<header class="nav">
+  <a href="#/" class="logo"><span class="logo-tile"><i data-lucide="shield-check"></i></span><span>КИБЕР<b>ЩИТ</b></span></a>
+  <nav>
+    <a href="#/" data-r=""><i data-lucide="house"></i>Главная</a>
+    <div class="dd"><button data-r="quiz detective sort survival" aria-haspopup="true"><i data-lucide="gamepad-2"></i>Игры</button>
+      <div class="dd-menu">
+        <a href="#/quiz"><i data-lucide="target"></i>Квиз-тренажёр</a><a href="#/detective"><i data-lucide="search"></i>Кибер-детектив</a>
+        <a href="#/sort"><i data-lucide="layers"></i>Кибер-сортировка</a><a href="#/survival"><i data-lucide="infinity"></i>На выживание</a>
+      </div></div>
+    <div class="dd"><button data-r="kb tips uk constitution" aria-haspopup="true"><i data-lucide="book-open"></i>База</button>
+      <div class="dd-menu">
+        <a href="#/kb"><i data-lucide="book-open"></i>База знаний</a><a href="#/tips"><i data-lucide="lightbulb"></i>Советы</a>
+        <a href="#/uk"><i data-lucide="gavel"></i>Уголовный кодекс</a><a href="#/constitution"><i data-lucide="scroll-text"></i>Конституция</a>
+      </div></div>
+    <a href="#/achievements" data-r="achievements" id="navAch"><i data-lucide="trophy"></i>Достижения</a>
+    <a href="#/ai" data-r="ai"><i data-lucide="bot"></i>КиберAI</a>
+    <a href="#/profile" data-r="profile" id="navProfile"><i data-lucide="user"></i><span>Войти</span></a>
+  </nav>
+</header>
+
+<main id="app"></main>
+<footer class="foot">КиберЩит · Минчук Егор Сергеевич, группа 45тп · ГГКТТиД, Гродно</footer>
+<div id="toasts" aria-live="polite"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<div class="widget">
+  <div class="w-panel" id="wPanel" hidden>
+    <div class="w-head"><span class="ai-badge"><i data-lucide="bot"></i></span><div><b>Помощник</b><small>Подскажу, где что на сайте</small></div><button id="wClose" aria-label="Закрыть"><i data-lucide="x"></i></button></div>
+    <div class="w-msgs" id="wMsgs"><div class="msg bot">Привет! Что хочешь найти? Можно нажать на кнопку или написать вопрос.</div></div>
+    <div class="w-chips"><button data-go="quiz">Квиз</button><button data-go="detective">Детектив</button><button data-go="kb">База знаний</button><button data-go="tips">Чеклист</button></div>
+    <form id="wForm"><input id="wInput" placeholder="Например: где проверить пароль?" maxlength="300" autocomplete="off"><button aria-label="Отправить"><i data-lucide="send"></i></button></form>
+    <a href="#/ai" class="w-full">Открыть консультанта КиберAI <i data-lucide="arrow-right"></i></a>
+  </div>
+  <button class="w-btn" id="wBtn" aria-label="Помощник по сайту"><i data-lucide="bot"></i></button>
+</div>
+
+<script src="vendor/lucide.min.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script type="module" src="scene.js"></script>
+</body>
+</html>
