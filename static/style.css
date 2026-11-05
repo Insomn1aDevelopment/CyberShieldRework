@@ -97,11 +97,40 @@ main>*:nth-child(2){animation-delay:.06s}main>*:nth-child(3){animation-delay:.12
 .tab.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 
 /* ---------- главная ---------- */
-.hero3d{position:relative;width:min(340px,80vw);height:300px;margin:-10px auto 0;cursor:pointer}
-.hero3d .fallback{position:absolute;inset:0;display:grid;place-items:center;color:var(--accent)}
-.hero3d .fallback svg{width:120px;height:120px;animation:float 3s ease-in-out infinite}
-.hero3d:has(canvas) .fallback{display:none}
-.hero3d::after{content:'';position:absolute;left:20%;right:20%;bottom:6px;height:18px;border-radius:50%;background:var(--glow);filter:blur(14px);z-index:-1}
+.cs-logo{display:block;margin:0 auto;padding:0;border:0;background:none;color:var(--text);cursor:pointer;transition:transform .2s;-webkit-tap-highlight-color:transparent}
+.cs-logo:focus-visible{outline:2px solid var(--accent);outline-offset:6px;border-radius:24px}
+.cs-mark{display:block;width:min(240px,64vw);height:auto;margin:0 auto;overflow:visible;filter:drop-shadow(0 18px 30px var(--glow));animation:float 4s ease-in-out infinite}
+.cs-mark .s1{stop-color:var(--accent)}.cs-mark .s2{stop-color:var(--accent2)}
+.cs-orbit{fill:none;stroke:var(--accent);stroke-width:1.2;stroke-dasharray:3 9;opacity:.5;transform-origin:120px 120px;animation:spin 24s linear infinite}
+.cs-orbit.o2{stroke-dasharray:40 14 4 14;opacity:.3;animation-direction:reverse;animation-duration:36s}
+.cs-traces{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-dasharray:6 8;opacity:.7;animation:flow 1.6s linear infinite}
+.cs-nodes circle{fill:var(--card);stroke:var(--accent);stroke-width:2;animation:blink 2s ease-in-out infinite}
+.cs-nodes circle:nth-child(2n){animation-delay:.7s}
+.cs-fill{fill:url(#csG)}
+.cs-edge{fill:none;stroke:url(#csG);stroke-width:6;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.4s .1s cubic-bezier(.6,0,.2,1) forwards}
+.cs-inner{fill:none;stroke:#fff;stroke-width:2;opacity:.35}
+.cs-grid{stroke:#fff;stroke-width:1;opacity:.12}
+.cs-scan{fill:#fff;opacity:.25;animation:scan 3s ease-in-out infinite}
+.cs-check{fill:none;stroke:#fff;stroke-width:14;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw .6s 1.2s ease-out forwards}
+.cs-word{position:relative;display:inline-block;margin-top:14px;font:700 22px var(--head);letter-spacing:.32em;padding-left:.32em}
+.cs-word b{color:var(--accent)}
+.cs-word::before,.cs-word::after{content:attr(data-t);position:absolute;inset:0;padding-left:.32em;opacity:0;pointer-events:none}
+.cs-logo:hover .cs-word::before{opacity:.8;color:var(--accent);animation:glitch .35s steps(2) infinite}
+.cs-logo:hover .cs-word::after{opacity:.8;color:var(--accent2);animation:glitch .35s steps(2) infinite reverse}
+.cs-logo.hit .cs-mark{animation:hit .6s cubic-bezier(.3,1.6,.5,1)}
+.cs-logo.hit .cs-fill{animation:flash .6s}
+.cs-tip{max-width:460px;min-height:44px;margin:14px auto 6px;display:flex;gap:10px;align-items:center;justify-content:center;text-align:left;font-size:14px;color:var(--muted)}
+.cs-tip svg{flex:none;color:var(--accent);width:22px;height:22px}
+.cs-tip.show{padding:10px 16px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;background:var(--card);color:var(--text);animation:msg .4s both}
+.hero p:has(.typer){min-height:3em}
+.typer{color:var(--accent);font-weight:600}
+.typer::after{content:'';display:inline-block;width:2px;height:1em;margin-left:2px;vertical-align:-.15em;background:currentColor;animation:blink .8s steps(1) infinite}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes flow{to{stroke-dashoffset:-28}}
+@keyframes scan{0%,100%{transform:translateY(20px)}50%{transform:translateY(200px)}}
+@keyframes glitch{0%{transform:translate(-2px,1px);clip-path:inset(0 0 55% 0)}50%{transform:translate(2px,-1px);clip-path:inset(45% 0 0 0)}100%{transform:translate(-1px,0);clip-path:inset(20% 0 30% 0)}}
+@keyframes hit{30%{transform:scale(.9)}60%{transform:scale(1.08)}}
+@keyframes flash{30%{filter:brightness(1.6)}}
 @keyframes float{50%{transform:translateY(-10px)}}
 .ticker{overflow:hidden;white-space:nowrap;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 0;font:13px var(--mono);color:var(--muted);
   mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
@@ -389,4 +418,4 @@ input.in:focus,textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 3px
   .card{padding:18px}
   .guest{flex-direction:column;text-align:center}
 }
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}#rain{display:none}.rv{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}#rain{display:none}.rv{opacity:1;transform:none}.cs-edge,.cs-check{stroke-dashoffset:0}}

@@ -145,9 +145,10 @@ function home(app) {
   app.innerHTML = `
     <div class="ticker"><div>${[...TICKER, ...TICKER].map(([i, t]) => `<span>${ic(i)}${esc(t)}</span>`).join('')}</div></div>
     <section class="hero" style="padding-top:10px">
-      <div class="hero3d" id="hero3d" title="Нажми на щит"><div class="fallback">${ic('shield-check')}</div></div>
+      <button class="cs-logo tilt" id="csLogo" aria-label="Логотип Cyber Shield. Нажми, чтобы получить совет">${LOGO_SVG}<span class="cs-word" data-t="CYBER SHIELD">CYBER <b>SHIELD</b></span></button>
+      <div class="cs-tip" id="csTip" aria-live="polite"><small>Нажми на щит, чтобы получить совет</small></div>
       <h1>КИБЕР<span class="shine-text">ЩИТ</span></h1>
-      <p>Играй, раскрывай дела мошенников и узнавай, как защитить себя в интернете</p>
+      <p>Играй и учись <span class="typer" id="typer"></span></p>
       <div class="row center"><a class="btn dark" href="#/quiz">${ic('target')} Начать квиз</a><a class="btn" href="#/detective">${ic('search')} Детектив</a></div>
     </section>
     ${ME ? statCards([[S.games || 0, 'Игр сыграно', 'c-acc'], [S.best || 0, 'Лучший счёт', 'c-ok'], [accuracy(), 'Точность', '', '%'], [gotIds().size, 'Достижений']])
@@ -172,11 +173,48 @@ function home(app) {
     const play = () => { box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&rel=0&modestbranding=1" title="Видеогайд КиберЩит" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`; box.onclick = box.onkeydown = null; };
     box.onclick = play; box.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(); } };
   }
-  const el = $('#hero3d', app);
-  const mount = () => { if (!el.isConnected || el.dataset.mounted) return; el.dataset.mounted = 1; const dispose = window.mountHero3D(el); if (dispose) cleanups.push(dispose); };
-  if (window.mountHero3D) mount();
-  else { addEventListener('hero3d-ready', mount, { once: true }); cleanups.push(() => removeEventListener('hero3d-ready', mount)); }
+  // клик по щиту: волна + случайный совет
+  const logo = $('#csLogo', app), tip = $('#csTip', app);
+  let lastTip = -1;
+  logo.onclick = () => {
+    logo.classList.remove('hit'); void logo.offsetWidth; logo.classList.add('hit');
+    let i; do i = Math.random() * TIPS.length | 0; while (i === lastTip && TIPS.length > 1); lastTip = i;
+    tip.innerHTML = `${ic(TIPS[i].icon)}<span><b>${esc(TIPS[i].title)}.</b> ${esc(TIPS[i].text)}</span>`;
+    tip.classList.remove('show'); void tip.offsetWidth; tip.classList.add('show');
+  };
+
+  // печатающаяся строка под заголовком
+  const typer = $('#typer', app), words = ['распознавать мошенников', 'придумывать надёжные пароли', 'защищать личные данные', 'знать свои права в сети'];
+  if (REDUCED) { typer.textContent = words[0]; return; }
+  let w = 0, n = 0, del = false, timer;
+  const step = () => {
+    if (!typer.isConnected) return;
+    const word = words[w];
+    n += del ? -1 : 1; typer.textContent = word.slice(0, n);
+    let wait = del ? 35 : 70;
+    if (!del && n === word.length) { del = true; wait = 1800; }
+    else if (del && n === 0) { del = false; w = (w + 1) % words.length; wait = 300; }
+    timer = setTimeout(step, wait);
+  };
+  step(); cleanups.push(() => clearTimeout(timer));
 }
+
+const SHIELD_D = 'M120 32 186 58v54c0 44-28 76-66 96-38-20-66-52-66-96V58z';
+const LOGO_SVG = `<svg class="cs-mark" viewBox="0 0 240 240" aria-hidden="true">
+  <defs>
+    <linearGradient id="csG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="s1"/><stop offset="1" class="s2"/></linearGradient>
+    <clipPath id="csClip"><path d="${SHIELD_D}"/></clipPath>
+  </defs>
+  <circle class="cs-orbit" cx="120" cy="120" r="112"/>
+  <circle class="cs-orbit o2" cx="120" cy="120" r="100"/>
+  <g class="cs-traces"><path d="M54 92H30V70H14"/><path d="M54 140H22v24"/><path d="M186 92h24V70h16"/><path d="M186 140h32v24"/><path d="M120 208v20"/></g>
+  <g class="cs-nodes"><circle cx="14" cy="70" r="4"/><circle cx="22" cy="164" r="4"/><circle cx="226" cy="70" r="4"/><circle cx="218" cy="164" r="4"/><circle cx="120" cy="228" r="4"/></g>
+  <path class="cs-fill" d="${SHIELD_D}"/>
+  <path class="cs-edge" pathLength="1" d="${SHIELD_D}"/>
+  <path class="cs-inner" d="M120 50 170 70v42c0 34-20 59-50 76-30-17-50-42-50-76V70z"/>
+  <g clip-path="url(#csClip)"><g class="cs-grid">${Array.from({ length: 9 }, (_, i) => `<path d="M${50 + i * 18} 30v190M40 ${40 + i * 20}h160"/>`).join('')}</g><rect class="cs-scan" x="40" y="0" width="160" height="14"/></g>
+  <path class="cs-check" pathLength="1" d="m92 118 20 20 38-40"/>
+</svg>`;
 
 // ---------- общий каркас игр ----------
 const gameIntro = ({ icon, kicker, title, sub, rules, best, body = '' }) => `
