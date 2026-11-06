@@ -7,16 +7,17 @@
 <meta name="description" content="Игры и задания о безопасности в интернете для детей и подростков">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b5cf0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Oswald:wght@600;700&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap">
 <link rel="stylesheet" href="style.css">
 <script src="theme.js"></script>
 </head>
 <body>
 <canvas id="rain" aria-hidden="true"></canvas>
-<button id="theme" class="theme-btn" title="Сменить тему" aria-label="Сменить тему"><i data-lucide="moon"></i></button>
+<button id="theme" class="theme-btn" type="button"></button>
 
 <header class="nav">
-  <a href="#/" class="logo"><span class="logo-tile"><i data-lucide="shield-check"></i></span><span>КИБЕР<b>ЩИТ</b></span></a>
+  <a href="#/" class="logo"><span class="logo-tile"><i data-lucide="shield-check"></i></span><span>КиберЩит</span></a>
   <nav>
     <a href="#/" data-r=""><i data-lucide="house"></i>Главная</a>
     <div class="dd"><button data-r="quiz detective sort survival" aria-haspopup="true"><i data-lucide="gamepad-2"></i>Игры</button>
@@ -36,7 +37,7 @@
 </header>
 
 <main id="app"></main>
-<footer class="foot">КиберЩит · Минчук Егор Сергеевич, группа 45тп · ГГКТТиД, Гродно</footer>
+<footer class="foot">КиберЩит — проект Минчука Егора Сергеевича, группа 45тп, ГГКТТиД, Гродно</footer>
 <div id="toasts" aria-live="polite"></div>
 <canvas id="confetti" aria-hidden="true"></canvas>
 
