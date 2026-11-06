@@ -50,18 +50,10 @@ function toast(text, icon = 'sparkles') {
 }
 
 // ---------- API ----------
-let CONFIG = { youtubeId: '', ai: false };
+// Настройки: aiUrl — адрес Worker с нейросетью (папка worker/, см. README), youtubeId — ID видеогайда на YouTube
+const CONFIG = { aiUrl: '', youtubeId: '' };
 let ME = null;            // пользователь; без входа прогресс не сохраняется
 let S = {};               // статистика текущего пользователя
-// Сервер нужен только для нейросети КиберAI; без него (GitHub Pages) запрос падает, и чат отвечает сам
-async function api(path, { body } = {}) {
-  const r = await fetch('/api' + path, {
-    method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body),
-  });
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
-  return d;
-}
 
 // ---------- аккаунт в куках: cs_acc — профиль, cs_prog — прогресс, cs_in — вход выполнен ----------
 // Базы нет: аккаунт живёт только в этом браузере. Пароль защищает от случайного входа, а не от владельца компьютера.
@@ -594,9 +586,13 @@ function localReply(text, mode) {
   const route = mode === 'helper' && hit(AI_ROUTE_HINTS);
   return route ? `Вот подходящий раздел. [[go:${route[1]}]]` : hit(AI_FALLBACK)?.[1] || AI_FALLBACK_DEFAULT;
 }
-// Сервер с ключом — живой ИИ; без сервера (GitHub Pages), без ключа или при сбое — встроенная база
+// Нейросеть через Worker; если он не настроен, перегружен или недоступен — встроенная база ответов
 async function askAI(messages, mode) {
-  try { const { reply } = await api('/ai', { body: { messages, mode } }); if (reply) return reply; } catch {}
+  if (CONFIG.aiUrl) try {
+    const r = await fetch(CONFIG.aiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, mode }) });
+    const { reply } = await r.json();
+    if (reply) return reply;
+  } catch {}
   return localReply(messages.at(-1).content, mode);
 }
 function ai(app) {
@@ -763,6 +759,5 @@ themeBtn.onclick = () => {
 (async function boot() {
   syncThemeBtn();
   loadAccount();
-  try { CONFIG = { ...CONFIG, ...(await api('/config')) }; } catch {}
   updateNav(); render();
 })();
