@@ -93,9 +93,8 @@ for t in (t2, ta, reg("third")[1]["token"]):
     call(f"/api/posts/{pid}/report", {}, t)
 assert all(p["id"] != pid for p in call("/api/posts")[1]["posts"])
 
-# AI без ключа отвечает из встроенной базы; помощник даёт ссылку на раздел
-assert "пароль" in call("/api/ai", {"messages": [{"role": "user", "content": "Как придумать пароль?"}]})[1]["reply"].lower()
-assert "[[go:quiz]]" in call("/api/ai", {"messages": [{"role": "user", "content": "где квиз?"}], "mode": "helper"})[1]["reply"]
+# AI без ключа возвращает null — браузер отвечает из встроенной базы (AI_FALLBACK в data.js)
+assert call("/api/ai", {"messages": [{"role": "user", "content": "Как придумать пароль?"}]})[1]["reply"] is None
 assert call("/api/ai", {"messages": []})[0] == 400
 
 # блокировка после 5 неудачных входов

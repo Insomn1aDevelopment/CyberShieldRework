@@ -43,7 +43,7 @@ svg.lucide{width:1.15em;height:1.15em;stroke-width:2;vertical-align:-.2em;flex:n
 .dd-menu a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;text-decoration:none;font-size:15px}
 .dd-menu a svg{color:var(--accent)}
 .dd-menu a:hover{background:var(--card2)}
-.theme-btn{position:fixed;top:12px;left:12px;z-index:30;display:grid;place-items:center;width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);transition:transform .4s}
+.theme-btn{position:fixed;top:8px;left:12px;z-index:30;display:grid;place-items:center;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);transition:transform .4s}
 .theme-btn:hover{transform:rotate(25deg)}
 
 /* ---------- раскладка ---------- */
@@ -54,7 +54,7 @@ main>*:nth-child(2){animation-delay:.06s}main>*:nth-child(3){animation-delay:.12
 @keyframes enter{from{opacity:0;transform:translateY(18px) rotateX(6deg)}}
 .foot{position:relative;z-index:1;text-align:center;color:var(--muted);font-size:12px;padding:24px 16px 90px;border-top:1px solid var(--line)}
 .hero{text-align:center;padding:36px 0 26px}
-.hero h1{font-size:clamp(40px,9vw,70px)}
+.hero h1{font-size:clamp(28px,8.5vw,70px);overflow-wrap:anywhere}
 .hero p{color:var(--muted);max-width:420px;margin:12px auto}
 .shine-text{background:linear-gradient(100deg,var(--accent) 20%,var(--accent2) 40%,var(--accent) 60%);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 4s linear infinite}
 @keyframes shine{to{background-position:-200% center}}
@@ -337,7 +337,8 @@ kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 
 .chat-head{display:flex;gap:12px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
 .chat-head small{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:var(--mono)}
 .chat-head small i{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
-.chat-head .btn{margin-left:auto}
+.chat-head .btn{margin-left:auto;flex:none}
+.chat-head>div{min-width:0}
 .ai-badge{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;flex:none}
 .msgs{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
 .msg{max-width:85%;padding:12px 16px;border-radius:14px;font-size:15px;white-space:pre-wrap;word-wrap:break-word;animation:msg .3s cubic-bezier(.2,.8,.2,1) both}
@@ -409,13 +410,18 @@ input.in:focus,textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 3px
 @keyframes toast{from{opacity:0;transform:translateX(40px) scale(.9)}}
 
 @media (max-width:780px){
-  .nav{justify-content:flex-start;gap:10px;overflow-x:auto;padding-left:54px}
+  .nav{justify-content:flex-start;gap:6px;overflow-x:auto;padding:0 4px 0 58px}
   .nav nav{flex:none}
+  .nav nav>a,.dd>button{padding:0 5px;font-size:10px}
+  .logo{display:none}
   .dd-menu{position:fixed;top:56px;left:16px;right:16px}
   .chat-wrap,.prof{grid-template-columns:1fr}
-  .topics{grid-template-columns:repeat(2,1fr)}
+  .topics{display:flex;overflow-x:auto}
+  .topics .label{display:none}
+  .topics button{flex:none;white-space:nowrap}
   .chat{height:70vh}
   .card{padding:18px}
+  .card.chat{padding:0}
   .guest{flex-direction:column;text-align:center}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}#rain{display:none}.rv{opacity:1;transform:none}.cs-edge,.cs-check{stroke-dashoffset:0}}

@@ -582,9 +582,15 @@ const fmt = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
 const TYPING = '<span class="typing"><i></i><i></i><i></i></span>';
 const AI_HELLO = 'Привет! Я КиберAI. Помогаю разобраться, как оставаться в безопасности в интернете.\n\nМожно спросить:\n• как распознать обман\n• как защитить аккаунт\n• что говорят законы Беларуси\n• что делать, если что-то случилось\n\nВыбери тему или напиши свой вопрос. Не пиши мне своё имя, адрес, телефон и пароли.';
 let aiHistory = [];
+function localReply(text, mode) {
+  const t = text.toLowerCase(), hit = list => list.find(([keys]) => keys.some(k => t.includes(k)));
+  const route = mode === 'helper' && hit(AI_ROUTE_HINTS);
+  return route ? `Вот подходящий раздел. [[go:${route[1]}]]` : hit(AI_FALLBACK)?.[1] || AI_FALLBACK_DEFAULT;
+}
+// Сервер с ключом — живой ИИ; без сервера (GitHub Pages), без ключа или при сбое — встроенная база
 async function askAI(messages, mode) {
-  try { return (await api('/ai', { body: { messages, mode } })).reply; }
-  catch (e) { return 'Не получилось ответить: ' + e.message; }
+  try { const { reply } = await api('/ai', { body: { messages, mode } }); if (reply) return reply; } catch {}
+  return localReply(messages.at(-1).content, mode);
 }
 function ai(app) {
   app.innerHTML = hero('bot', 'Консультант', 'Кибер<span class="shine-text">AI</span>', 'Задай вопрос о безопасности в интернете, своих правах или законах Беларуси') + `
