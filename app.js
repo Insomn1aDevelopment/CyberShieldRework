@@ -26,18 +26,6 @@ function enhance() {
 }
 new MutationObserver(() => { if (!enhanceQueued) { enhanceQueued = true; requestAnimationFrame(enhance); } }).observe(document.body, { childList: true, subtree: true });
 
-// 3D-наклон карточек .tilt
-let tilted = null;
-document.addEventListener('pointermove', e => {
-  if (REDUCED || e.pointerType === 'touch') return;
-  const el = e.target.closest?.('.tilt');
-  if (tilted && tilted !== el) tilted.style.transform = '';
-  tilted = el;
-  if (!el) return;
-  const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
-  el.style.transform = `rotateY(${x * 14}deg) rotateX(${-y * 14}deg) translateZ(6px)`;
-});
-
 // ---------- конфетти ----------
 function confetti() {
   if (REDUCED) return;
@@ -152,38 +140,40 @@ addEventListener('hashchange', render);
 $$('.dd > button').forEach(b => b.onclick = e => { e.stopPropagation(); const d = b.parentElement, was = d.classList.contains('open'); $$('.dd').forEach(x => x.classList.remove('open')); d.classList.toggle('open', !was); });
 document.addEventListener('click', () => $$('.dd').forEach(d => d.classList.remove('open')));
 
-const hero = (icon, pill, title, sub) => `<section class="hero"><span class="pill">${ic(icon)} ${pill}</span><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</section>`;
+const hero = (icon, pill, title, sub) => `<section class="hero"><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</section>`;
 const statCards = items => `<div class="grid">${items.map(([v, l, c, suf]) => `<div class="stat rv"><b class="${c || ''}" data-count="${v}" data-suf="${suf || ''}">0</b><span>${l}</span></div>`).join('')}</div>`;
 const accuracy = () => S.answered ? Math.round(S.correct / S.answered * 100) : 0;
 
 // ---------- главная ----------
+const HOME_PLAY = [
+  ['target', 'Квиз-тренажёр', () => `${QUESTIONS.length} вопросов, три уровня сложности`, 'quiz'],
+  ['search', 'Кибер-детектив', () => `${CASES.length} дел по реальным схемам мошенников`, 'detective'],
+  ['layers', 'Кибер-сортировка', () => 'Разложи ситуации на безопасные и опасные', 'sort'],
+  ['infinity', 'На выживание', () => 'Правда или ложь на скорость, три жизни', 'survival'],
+];
+const HOME_LEARN = [
+  ['book-open', 'База знаний', () => 'Угрозы, защита и куда обращаться за помощью', 'kb'],
+  ['list-checks', 'Советы и чеклист', () => 'Простые правила и 12 шагов к защите', 'tips'],
+  ['gavel', 'Уголовный кодекс', () => 'Что в сети считается преступлением', 'uk'],
+  ['scroll-text', 'Конституция', () => 'Твои права и тайна переписки', 'constitution'],
+  ['bot', 'КиберAI', () => 'Задай любой вопрос о безопасности', 'ai'],
+];
+const homeList = items => `<div class="menu">${items.map(([i, t, d, h]) => `<a href="#/${h}"><span class="ico">${ic(i)}</span><span><b>${t}</b><small>${d()}</small></span></a>`).join('')}</div>`;
 function home(app) {
   const yt = /^[\w-]{11}$/.test(CONFIG.youtubeId) ? CONFIG.youtubeId : '';
   app.innerHTML = `
-    <div class="ticker"><div>${[...TICKER, ...TICKER].map(([i, t]) => `<span>${ic(i)}${esc(t)}</span>`).join('')}</div></div>
-    <section class="hero" style="padding-top:10px">
-      <button class="cs-logo tilt" id="csLogo" aria-label="Логотип Cyber Shield. Нажми, чтобы получить совет">${LOGO_SVG}<span class="cs-word" data-t="CYBER SHIELD">CYBER <b>SHIELD</b></span></button>
-      <div class="cs-tip" id="csTip" aria-live="polite"><small>Нажми на щит, чтобы получить совет</small></div>
-      <h1>КИБЕР<span class="shine-text">ЩИТ</span></h1>
+    <section class="hero home-hero">
+      <button class="cs-logo" id="csLogo" aria-label="Щит КиберЩит. Нажми, чтобы получить совет">${LOGO_SVG}</button>
+      <div class="cs-tip" id="csTip" aria-live="polite"><small>Нажми на щит — получишь совет</small></div>
+      <h1>КиберЩит</h1>
       <p>Играй и учись <span class="typer" id="typer"></span></p>
-      <div class="row center"><a class="btn dark" href="#/quiz">${ic('target')} Начать квиз</a><a class="btn" href="#/detective">${ic('search')} Детектив</a></div>
+      <div class="row center"><a class="btn acc" href="#/quiz">${ic('target')} Начать квиз</a><a class="btn" href="#/detective">${ic('search')} Раскрыть дело</a></div>
     </section>
-    ${ME ? statCards([[S.games || 0, 'Игр сыграно', 'c-acc'], [S.best || 0, 'Лучший счёт', 'c-ok'], [accuracy(), 'Точность', '', '%'], [gotIds().size, 'Достижений']])
-      : `<div class="card guest rv"><span class="ico">${ic('user')}</span><div style="flex:1"><h3 style="font-size:18px">Создай аккаунт</h3><p class="muted" style="margin:4px 0 0;font-size:14px">С аккаунтом сохраняются результаты игр, открываются достижения и личный кабинет. Без него можно играть, но прогресс не запоминается.</p></div><a class="btn acc sm" href="#/profile">Войти ${ic('arrow-right')}</a></div>`}
-    <div class="label rv">Видеогайд по платформе</div>
-    ${yt ? `<div class="yt rv" id="yt" role="button" tabindex="0" aria-label="Смотреть видео"><img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="Видеогайд по платформе КиберЩит" loading="lazy"><span class="play">${ic('play')}</span></div>`
-      : `<div class="yt yt-empty rv">${ic('play')}<b>Видео скоро появится</b><small>Здесь будет короткий гайд о том, как пользоваться платформой</small></div>`}
-    <div class="label rv">Разделы платформы</div>
-    <div class="grid">${[
-      ['target', 'Квиз-тренажёр', `${QUESTIONS.length} вопросов, 3 уровня сложности, таймер и серии`, 'quiz'],
-      ['search', 'Кибер-детектив', `${CASES.length} дел, основанных на реальных схемах мошенников`, 'detective'],
-      ['layers', 'Кибер-сортировка', 'Раздели ситуации на безопасные и опасные', 'sort'],
-      ['infinity', 'На выживание', 'Правда или ложь на скорость. Три жизни', 'survival'],
-      ['book-open', 'База знаний', 'Угрозы, защита, законы и куда обращаться за помощью', 'kb'],
-      ['list-checks', 'Советы', 'Простые правила и чеклист из 12 пунктов', 'tips'],
-      ['bot', 'КиберAI', 'Задай вопрос о безопасности в интернете', 'ai'],
-      ['trophy', 'Достижения', `${ACHIEVEMENTS.length} наград для тех, у кого есть аккаунт`, 'achievements'],
-    ].map(([i, t, d, h]) => `<a class="feature tilt rv" href="#/${h}"><span class="ico">${ic(i)}</span><h3>${t}</h3><p>${d}</p></a>`).join('')}</div>`;
+    ${ME ? statCards([[S.games || 0, 'Игр сыграно', 'c-acc'], [S.best || 0, 'Лучший счёт', 'c-ok'], [accuracy(), 'Точность', '', '%'], [gotIds().size, 'Наград']])
+      : `<div class="card guest"><span class="ico">${ic('user')}</span><p>Без аккаунта играть можно, но результаты не сохранятся. С аккаунтом копятся очки и награды.</p><a class="btn sm" href="#/profile">Создать аккаунт</a></div>`}
+    <h2 class="label">Играть</h2>${homeList(HOME_PLAY)}
+    <h2 class="label">Разобраться</h2>${homeList(HOME_LEARN)}
+    ${yt ? `<h2 class="label">Как пользоваться платформой</h2><div class="yt" id="yt" role="button" tabindex="0" aria-label="Смотреть видео"><img src="https://i.ytimg.com/vi/${yt}/hqdefault.jpg" alt="Видеогайд по платформе КиберЩит" loading="lazy"><span class="play">${ic('play')}</span></div>` : ''}`;
 
   if (yt) {
     const box = $('#yt', app);
@@ -235,7 +225,7 @@ const LOGO_SVG = `<svg class="cs-mark" viewBox="0 0 240 240" aria-hidden="true">
 
 // ---------- общий каркас игр ----------
 const gameIntro = ({ icon, kicker, title, sub, rules, best, body = '' }) => `
-  <section class="g-intro"><div class="g-badge">${ic(icon)}</div><span class="pill">${kicker}</span><h1>${title}</h1><p>${sub}</p></section>
+  <section class="g-intro"><div class="g-badge">${ic(icon)}</div><h1>${title}</h1><p>${sub}</p></section>
   <div class="card g-panel">${body}
     <div class="g-rules">${rules.map(([i, t]) => `<div>${ic(i)}<span>${t}</span></div>`).join('')}</div>
     <div class="g-start">${ME && best != null ? `<span class="g-best">${ic('trophy')} Рекорд: <b>${best}</b></span>` : ''}<button class="btn acc" id="go">${ic('play')} Начать</button></div>
@@ -246,7 +236,7 @@ const choices = (a, b) => `<div class="choices">
   <button class="choice good" data-v="1">${ic(a[0])}<b>${a[1]}</b><kbd>←</kbd></button>
   <button class="choice bad" data-v="0">${ic(b[0])}<b>${b[1]}</b><kbd>→</kbd></button></div>`;
 const resultScreen = ({ big, sub, pct, stats, msg, extra = '' }) => `
-  <div class="card result"><span class="pill">${ic('flag')} Игра окончена</span>
+  <div class="card result"><h2>Игра окончена</h2>
     <div class="res-ring" style="--p:${Math.round(pct)}"><div><b data-count="${big}">0</b><small>${sub}</small></div></div>
     <div class="res-stats">${stats.map(([v, l, c]) => `<div><b class="${c || ''}">${v}</b><span>${l}</span></div>`).join('')}</div>
     <p class="res-msg">${msg}</p>${extra}${guestHint()}
@@ -258,7 +248,7 @@ function quiz(app) {
   const quit = () => { stopTimer(); document.onkeydown = null; intro(); };
   const intro = () => {
     app.innerHTML = gameIntro({
-      icon: 'target', kicker: 'Квиз-тренажёр', title: 'Проверь <span class="shine-text">знания</span>',
+      icon: 'target', kicker: 'Квиз-тренажёр', title: 'Проверь знания',
       sub: `${QUESTIONS.length} вопросов о безопасности в интернете. Чем быстрее и точнее ответ, тем больше очков.`,
       best: S.best || 0,
       body: `<div class="label" style="margin-top:0">Уровень сложности</div>
@@ -302,7 +292,7 @@ function quiz(app) {
       save();
       const last = st.i + 1 >= st.qs.length;
       $('#after', app).innerHTML = `<div class="explain ${ok ? 'is-ok' : 'is-bad'}"><b>${ok ? ic('circle-check') + ' Верно!' : picked === -1 ? ic('timer') + ' Время вышло' : ic('circle-x') + ' Неверно'}</b> ${esc(q.e)}</div>
-        <button class="btn dark sm" id="next" style="margin-top:14px">${last ? 'Результат' : 'Дальше'} ${ic('arrow-right')}</button>`;
+        <button class="btn dark sm" id="next" style="margin-top:14px">${last ? 'Результат' : 'Дальше'}</button>`;
       $('#next', app).onclick = () => { st.i++; last ? end() : ask(); };
       $('#next', app).focus();
     };
@@ -345,9 +335,9 @@ function quiz(app) {
 function detective(app) {
   const list = () => {
     const solved = CASES.filter(c => (S.cases || []).includes(c.id)).length;
-    app.innerHTML = `<section class="g-intro"><div class="g-badge">${ic('search')}</div><span class="pill">Кибер-детектив</span><h1>Раскрой <span class="shine-text">дело</span></h1><p>Изучи улики и разгадай схему мошенников. Все дела основаны на реальных случаях.</p></section>
+    app.innerHTML = `<section class="g-intro"><div class="g-badge">${ic('search')}</div><h1>Раскрой дело</h1><p>Изучи улики и разгадай схему мошенников. Все дела основаны на реальных случаях.</p></section>
       <div class="card case-progress"><div class="qbar" style="margin:0 0 8px"><span>${ic('folder-open')} Раскрыто дел</span><span>${solved} из ${CASES.length}</span></div><div class="progress"><div style="width:${solved / CASES.length * 100}%"></div></div></div>
-      <div class="cases">${CASES.map((c, i) => { const done = (S.cases || []).includes(c.id); return `<button class="case tilt rv ${done ? 'done' : ''}" data-c="${c.id}">
+      <div class="cases">${CASES.map((c, i) => { const done = (S.cases || []).includes(c.id); return `<button class="case rv ${done ? 'done' : ''}" data-c="${c.id}">
         <span class="case-no">№${String(i + 1).padStart(2, '0')}</span><span class="ico">${ic(c.icon)}</span>
         <h3>${esc(c.title)}</h3><p>${esc(c.intro)}</p>
         <span class="case-st">${done ? ic('badge-check') + ' Раскрыто' : ic('lock') + ' Не раскрыто'}</span></button>`; }).join('')}</div>`;
@@ -385,7 +375,7 @@ function detective(app) {
       $('#after', app).innerHTML = `<div class="explain is-ok"><b>${ic('badge-check')} Дело раскрыто!</b> ${esc(c.explain)}</div>
         <div class="explain"><b>${ic('gavel')} Закон:</b> ${esc(c.law)}</div>
         ${guestHint()}
-        <div class="row" style="margin-top:14px">${next ? `<button class="btn dark sm" id="nx">Следующее дело ${ic('arrow-right')}</button>` : ''}<button class="btn sm" id="ls">Все дела</button></div>`;
+        <div class="row" style="margin-top:14px">${next ? `<button class="btn dark sm" id="nx">Следующее дело</button>` : ''}<button class="btn sm" id="ls">Все дела</button></div>`;
       if (next) $('#nx', app).onclick = () => open(next);
       $('#ls', app).onclick = list;
     });
@@ -399,7 +389,7 @@ function sort(app) {
   const quit = () => { document.onkeydown = null; intro(); };
   const intro = () => {
     app.innerHTML = gameIntro({
-      icon: 'layers', kicker: 'Кибер-сортировка', title: 'Безопасно <span class="shine-text">или нет?</span>',
+      icon: 'layers', kicker: 'Кибер-сортировка', title: 'Безопасно или нет?',
       sub: `${N} случайных ситуаций из ${SORT_ITEMS.length}. Реши, какие из них безопасны, а какие нет.`,
       best: `${S.sortBest || 0} из ${N}`,
       rules: [['shield-check', 'Безопасно — влево'], ['triangle-alert', 'Опасно — вправо'], ['keyboard', 'Стрелки ← и → на клавиатуре'], ['list-checks', 'В конце — разбор ошибок']],
@@ -426,7 +416,7 @@ function sort(app) {
       const sc = $('#sc', app);
       sc.classList.add(safe ? 'fly-l' : 'fly-r');
       if (!ok) sc.classList.add('shake');
-      $('#after', app).innerHTML = `<div class="explain ${ok ? 'is-ok' : 'is-bad'}"><b>${ok ? ic('circle-check') + ' Верно' : ic('circle-x') + ' Ошибка'}:</b> это ${it.safe ? 'безопасно' : 'опасно'} — ${esc(it.why)}</div><button class="btn dark sm" id="next" style="margin-top:12px">Дальше ${ic('arrow-right')}</button>`;
+      $('#after', app).innerHTML = `<div class="explain ${ok ? 'is-ok' : 'is-bad'}"><b>${ok ? ic('circle-check') + ' Верно' : ic('circle-x') + ' Ошибка'}:</b> это ${it.safe ? 'безопасно' : 'опасно'} — ${esc(it.why)}</div><button class="btn dark sm" id="next" style="margin-top:12px">Дальше</button>`;
       $('#next', app).onclick = advance; $('#next', app).focus();
     };
     const advance = () => { i++; i < items.length ? show() : end(); };
@@ -455,7 +445,7 @@ function survival(app) {
   const quit = () => { stopTimer(); document.onkeydown = null; intro(); };
   const intro = () => {
     app.innerHTML = gameIntro({
-      icon: 'infinity', kicker: 'На выживание', title: 'Правда <span class="shine-text">или ложь</span>',
+      icon: 'infinity', kicker: 'На выживание', title: 'Правда или ложь',
       sub: 'Три жизни и всё меньше времени на каждый ответ. Сколько продержишься?',
       best: S.survBest || 0,
       rules: [['heart', 'Три жизни — ошибка отнимает одну'], ['timer', 'Время сокращается с каждым верным ответом'], ['keyboard', '← правда, → ложь'], ['trophy', 'Награды за 20 и 50 очков']],
@@ -513,15 +503,15 @@ function kb(app) {
     $$('.tab', app).forEach(t => t.classList.toggle('on', t.dataset.t === tab));
     const body = $('#kbBody', app);
     if (tab === 'threats') body.innerHTML = THREATS.map(t => `<div class="card rv">
-      <div class="threat-head"><span class="ico">${ic(t.icon)}</span><div><h2 style="font-size:22px">${t.title}</h2><small>// ${t.sub}</small></div></div>
-      <p>${t.text}</p><div class="signs"><h4>ПРИЗНАКИ</h4><ul>${t.signs.map(s => `<li>${s}</li>`).join('')}<li class="good">${ic('circle-check')} ${t.tip}</li></ul></div>
+      <div class="threat-head"><span class="ico">${ic(t.icon)}</span><div><h2 style="font-size:22px">${t.title}</h2><small>${t.sub}</small></div></div>
+      <p>${t.text}</p><div class="signs"><h4>Признаки</h4><ul>${t.signs.map(s => `<li>${s}</li>`).join('')}<li class="good">${ic('circle-check')} ${t.tip}</li></ul></div>
       <div class="danger"><span>Опасность</span><span>${t.danger}/10</span></div><div class="dbar"><div style="width:${t.danger * 10}%"></div></div></div>`).join('');
-    if (tab === 'protect') body.innerHTML = `<div class="grid g2">${PROTECT.map(p => `<div class="card tilt rv" style="margin:0"><span class="ico">${ic(p.icon)}</span><h3 style="font-size:18px;margin-top:12px">${p.title}</h3><ul style="padding-left:18px;margin:10px 0 0">${p.items.map(i => `<li>${i}</li>`).join('')}</ul></div>`).join('')}</div>`;
-    if (tab === 'laws') body.innerHTML = LAWS.map(l => `<div class="card rv"><div class="threat-head" style="margin:0"><span class="ico">${ic(l.icon)}</span><h3 style="font-size:17px">${l.title}</h3></div><p style="margin:12px 0 0">${l.text}</p>${l.link ? `<a class="btn sm" style="margin-top:12px" href="#/${l.link}">Подробнее ${ic('arrow-right')}</a>` : ''}</div>`).join('') +
+    if (tab === 'protect') body.innerHTML = `<div class="grid g2">${PROTECT.map(p => `<div class="card rv" style="margin:0"><span class="ico">${ic(p.icon)}</span><h3 style="font-size:18px;margin-top:12px">${p.title}</h3><ul style="padding-left:18px;margin:10px 0 0">${p.items.map(i => `<li>${i}</li>`).join('')}</ul></div>`).join('')}</div>`;
+    if (tab === 'laws') body.innerHTML = LAWS.map(l => `<div class="card rv"><div class="threat-head" style="margin:0"><span class="ico">${ic(l.icon)}</span><h3 style="font-size:17px">${l.title}</h3></div><p style="margin:12px 0 0">${l.text}</p>${l.link ? `<a class="btn sm" style="margin-top:12px" href="#/${l.link}">Подробнее</a>` : ''}</div>`).join('') +
       '<p class="muted" style="font-size:13px">Официальные тексты законов — на Национальном правовом интернет-портале pravo.by.</p>';
     if (tab === 'help') body.innerHTML = HELP.map(h => `<div class="card rv"><div class="threat-head" style="margin:0"><span class="ico">${ic(h.icon)}</span><div><h3 style="font-size:17px">${h.title}</h3><p style="margin:6px 0 0">${h.text}</p></div></div></div>`).join('');
   };
-  app.innerHTML = hero('book-open', 'База знаний', 'Кибер<span class="shine-text">безопасность</span>', 'Какие бывают угрозы, как от них защититься, что говорит закон и куда обращаться') +
+  app.innerHTML = hero('book-open', 'База знаний', 'Кибербезопасность', 'Какие бывают угрозы, как от них защититься, что говорит закон и куда обращаться') +
     `<div class="row center" style="margin-bottom:24px">${tabs.map(([k, i, l]) => `<button class="tab" data-t="${k}">${ic(i)} ${l}</button>`).join('')}</div><div id="kbBody"></div>`;
   $$('.tab', app).forEach(t => t.onclick = () => show(t.dataset.t));
   show('threats');
@@ -530,8 +520,8 @@ function kb(app) {
 // ---------- советы + чеклист ----------
 function tips(app) {
   let done = new Set(S.checklist || []);
-  app.innerHTML = hero('lightbulb', 'Советы', 'Простые <span class="shine-text">правила</span>', 'Привычки, которые защищают твои аккаунты, деньги и личные данные') +
-    `<div class="grid g2">${TIPS.map(t => `<div class="card tilt rv" style="margin:0"><span class="ico">${ic(t.icon)}</span><h3 style="font-size:17px;margin-top:12px">${t.title}</h3><p class="muted" style="margin:6px 0 0;font-size:14px">${t.text}</p></div>`).join('')}</div>
+  app.innerHTML = hero('lightbulb', 'Советы', 'Простые правила', 'Привычки, которые защищают твои аккаунты, деньги и личные данные') +
+    `<div class="grid g2">${TIPS.map(t => `<div class="card rv" style="margin:0"><span class="ico">${ic(t.icon)}</span><h3 style="font-size:17px;margin-top:12px">${t.title}</h3><p class="muted" style="margin:6px 0 0;font-size:14px">${t.text}</p></div>`).join('')}</div>
     <div class="label">${ic('list-checks')} Чеклист безопасности</div>
     <div class="card rv"><div class="row" style="justify-content:space-between;margin-bottom:10px"><span class="muted" id="cnt"></span><button class="btn sm" id="reset">${ic('refresh-cw')} Сбросить</button></div>
     <div class="progress"><div id="pbar"></div></div>${ME ? '' : `<p class="muted" style="font-size:13px">${ic('lock')} Без аккаунта отметки не сохраняются.</p>`}
@@ -554,13 +544,13 @@ function tips(app) {
 // ---------- законы ----------
 const articles = (list, withPunish) => list.map(a => `<div class="card art rv"><span class="num">Ст. ${a.art}</span><div><h3 style="font-size:18px">${a.title}</h3><p style="margin:6px 0 0">${a.text}</p>${withPunish ? `<div class="punish">${ic('scale')}<span>Наказание по ч. 1: ${a.punish}</span></div>` : ''}</div></div>`).join('');
 function uk(app) {
-  app.innerHTML = hero('gavel', 'Уголовный кодекс', 'Закон <span class="shine-text">в сети</span>', 'Какие действия в интернете считаются преступлением в Республике Беларусь') +
+  app.innerHTML = hero('gavel', 'Уголовный кодекс', 'Закон в сети', 'Какие действия в интернете считаются преступлением в Республике Беларусь') +
     `<div class="card rv" style="border-color:var(--accent)"><b>Важно знать.</b> В общем случае уголовная ответственность наступает с <b>16 лет</b>, а за некоторые преступления — с <b>14 лет</b> (ст. 27 УК). В этот список входит хищение с помощью компьютерной информации (ст. 212). Незнание закона не освобождает от ответственности.</div>
     <div class="label">Глава 31 и связанные статьи</div>${articles(UK, true)}
     <p class="muted" style="font-size:13px">Кратко и простыми словами, для учёбы. Сверено с текстом УК на pravo.by (ноябрь 2026). Полные формулировки и все части статей — там же.</p>`;
 }
 function constitution(app) {
-  app.innerHTML = hero('scroll-text', 'Конституция', 'Твои <span class="shine-text">права</span>', 'Основной закон Республики Беларусь защищает тебя и в интернете') +
+  app.innerHTML = hero('scroll-text', 'Конституция', 'Твои права', 'Основной закон Республики Беларусь защищает тебя и в интернете') +
     articles(CONSTITUTION, false) + '<p class="muted" style="font-size:13px">По тексту Конституции Республики Беларусь в действующей редакции (pravo.by).</p>';
 }
 
@@ -584,7 +574,7 @@ function achievements(app) {
     <div style="margin:16px 0">${statCards([[S.games || 0, 'Игр сыграно', 'c-acc'], [S.best || 0, 'Лучший счёт', 'c-ok'], [accuracy(), 'Точность', '', '%'], [S.answered || 0, 'Ответов']])}</div>
     ${ACH_CATS.map(([cat, icon]) => { const list = ACHIEVEMENTS.filter(a => a.cat === cat); return `
       <div class="row" style="justify-content:space-between;margin:28px 0 12px"><h2 style="font-size:20px;display:flex;gap:8px;align-items:center">${ic(icon)} ${cat}</h2><small class="muted">${list.filter(a => got.has(a.id)).length}/${list.length}</small></div>
-      <div class="grid">${list.map(a => `<div class="ach tilt rv ${got.has(a.id) ? 'got' : 'locked'}"><span class="ico">${ic(got.has(a.id) ? a.icon : 'lock')}</span><b>${a.title}</b><p>${a.desc}</p><p style="margin-top:6px;font-size:11px">${got.has(a.id) ? (dates[a.id] ? 'Получено ' + new Date(dates[a.id]).toLocaleDateString('ru-RU') : 'Получено') : 'Пока закрыто'}</p></div>`).join('')}</div>`; }).join('')}`;
+      <div class="grid">${list.map(a => `<div class="ach rv ${got.has(a.id) ? 'got' : 'locked'}"><span class="ico">${ic(got.has(a.id) ? a.icon : 'lock')}</span><b>${a.title}</b><p>${a.desc}</p><p style="margin-top:6px;font-size:11px">${got.has(a.id) ? (dates[a.id] ? 'Получено ' + new Date(dates[a.id]).toLocaleDateString('ru-RU') : 'Получено') : 'Пока закрыто'}</p></div>`).join('')}</div>`; }).join('')}`;
   animateRings(app);
   $('#reset', app).onclick = async () => {
     if (!confirm('Сбросить всю статистику и достижения? Это нельзя отменить.')) return;
@@ -595,7 +585,7 @@ function achievements(app) {
 
 // ---------- AI ----------
 const fmt = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-  .replace(/\[\[go:(\w+)\]\]/g, (m, r) => ROUTE_NAMES[r] ? `<a class="go-btn" href="#/${r}">${ic('arrow-right')} ${ROUTE_NAMES[r]}</a>` : '');
+  .replace(/\[\[go:(\w+)\]\]/g, (m, r) => ROUTE_NAMES[r] ? `<a class="go-btn" href="#/${r}">${ROUTE_NAMES[r]}</a>` : '');
 const TYPING = '<span class="typing"><i></i><i></i><i></i></span>';
 const AI_HELLO = 'Привет! Я КиберAI. Помогаю разобраться, как оставаться в безопасности в интернете.\n\nМожно спросить:\n• как распознать обман\n• как защитить аккаунт\n• что говорят законы Беларуси\n• что делать, если что-то случилось\n\nВыбери тему или напиши свой вопрос. Не пиши мне своё имя, адрес, телефон и пароли.';
 let aiHistory = [];
@@ -610,10 +600,10 @@ async function askAI(messages, mode) {
   return localReply(messages.at(-1).content, mode);
 }
 function ai(app) {
-  app.innerHTML = hero('bot', 'Консультант', 'Кибер<span class="shine-text">AI</span>', 'Задай вопрос о безопасности в интернете, своих правах или законах Беларуси') + `
+  app.innerHTML = hero('bot', 'Консультант', 'КиберAI', 'Задай вопрос о безопасности в интернете, своих правах или законах Беларуси') + `
     <div class="chat-wrap"><div class="card topics" style="padding:16px"><div class="label" style="margin:0 0 4px">Быстрые темы</div>
       ${AI_TOPICS.map(([i, t]) => `<button data-q="${esc(t)}">${ic(i)} ${esc(t)}</button>`).join('')}</div>
-    <div class="card chat"><div class="chat-head"><span class="ai-badge">${ic('bot')}</span><div><h3 style="font-size:17px">КиберAI</h3><small><i></i> Онлайн · отвечает про безопасность в сети</small></div><button class="btn sm" id="clear">${ic('trash-2')} Очистить</button></div>
+    <div class="card chat"><div class="chat-head"><span class="ai-badge">${ic('bot')}</span><div><h3 style="font-size:17px">КиберAI</h3><small><i></i> Отвечает на вопросы о безопасности в сети</small></div><button class="btn sm" id="clear">${ic('trash-2')} Очистить</button></div>
       <div class="msgs" id="msgs"></div>
       <form id="f"><input class="in" id="q" placeholder="Напиши вопрос..." maxlength="1500" autocomplete="off"><button class="send" aria-label="Отправить">${ic('send')}</button></form></div></div>
     <p class="muted" style="font-size:12px;text-align:center;margin-top:12px">КиберAI может ошибаться. Если случилось что-то серьёзное — обязательно расскажи взрослым.</p>`;
@@ -650,7 +640,7 @@ function authForm(app, mode) {
       <label class="field"><span>Пароль${reg ? ' (не короче 8 символов)' : ''}</span><input class="in" type="password" name="password" required minlength="${reg ? 8 : 1}" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
       ${reg ? '<label class="consent"><input type="checkbox" name="consent" required><span>Я не буду писать в профиле личные данные. Родители знают, что я регистрируюсь.</span></label>' : ''}
       <div class="err" id="aerr"></div>
-      <button class="btn acc" style="width:100%;justify-content:center">${reg ? 'Создать аккаунт' : 'Войти'} ${ic('arrow-right')}</button>
+      <button class="btn acc" style="width:100%;justify-content:center">${reg ? 'Создать аккаунт' : 'Войти'}</button>
     </form></div>`;
   $$('[data-m]', app).forEach(b => b.onclick = () => authForm(app, b.dataset.m));
   $('#af', app).onsubmit = async e => {
@@ -691,7 +681,7 @@ function cabinet(app, tab = 'ach') {
   $('#out', app).onclick = () => { signOut(); location.hash = '#/'; render(); };
   const body = $('#pbody', app);
 
-  if (tab === 'ach') body.innerHTML = got.length ? `<div class="grid">${got.map(a => `<div class="ach got tilt"><span class="ico">${ic(a.icon)}</span><b>${a.title}</b><p>${a.desc}</p></div>`).join('')}</div>` : `<div class="card muted">Пока нет наград — <a href="#/quiz">сыграй в квиз</a>!</div>`;
+  if (tab === 'ach') body.innerHTML = got.length ? `<div class="grid">${got.map(a => `<div class="ach got"><span class="ico">${ic(a.icon)}</span><b>${a.title}</b><p>${a.desc}</p></div>`).join('')}</div>` : `<div class="card muted">Пока нет наград — <a href="#/quiz">сыграй в квиз</a>!</div>`;
   if (tab === 'stats') body.innerHTML = statCards([
     [S.games || 0, 'Игр сыграно', 'c-acc'], [S.best || 0, 'Рекорд квиза', 'c-ok'], [accuracy(), 'Точность', '', '%'], [S.answered || 0, 'Ответов'],
     [(S.cases || []).length, 'Дел раскрыто', '', '/5'], [S.sortBest || 0, 'Сортировка', '', '/12'], [S.survBest || 0, 'Выживание'], [S.maxStreak || 0, 'Лучшая серия']]);
@@ -730,13 +720,19 @@ $('#wForm').onsubmit = async e => {
 
 // ---------- тема ----------
 const themeBtn = $('#theme');
-const syncThemeBtn = () => { themeBtn.innerHTML = ic(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon'); };
+// Светлая тема — «защитник», тёмная — «хакер». Смена режима раскрывается кругом от кнопки.
+const isHacker = () => document.documentElement.dataset.theme === 'dark';
+const syncThemeBtn = () => { themeBtn.innerHTML = isHacker() ? `${ic('shield-check')}<span>Стать защитником</span>` : `${ic('terminal')}<span>Стать хакером</span>`; };
 themeBtn.onclick = () => {
-  const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = t; ls.set('cs_theme', t); syncThemeBtn();
+  const t = isHacker() ? 'light' : 'dark';
+  const apply = () => { document.documentElement.dataset.theme = t; ls.set('cs_theme', t); syncThemeBtn(); enhance(); };
+  if (REDUCED || !document.startViewTransition) return apply();
+  const r = themeBtn.getBoundingClientRect(), st = document.documentElement.style;
+  st.setProperty('--vx', r.left + r.width / 2 + 'px'); st.setProperty('--vy', r.top + r.height / 2 + 'px');
+  document.startViewTransition(apply);
 };
 
-// ---------- цифровой дождь ----------
+// ---------- цифровой дождь (только в режиме хакера) ----------
 (function rain() {
   if (REDUCED) return;
   const cv = $('#rain'), ctx = cv.getContext('2d'), chars = '01КИБЕРЩИТ<>/{}#$';
@@ -744,10 +740,10 @@ themeBtn.onclick = () => {
   const resize = () => { cv.width = innerWidth; cv.height = innerHeight; cols = Array.from({ length: Math.ceil(cv.width / (fs * 3)) }, () => Math.random() * -50); };
   resize(); addEventListener('resize', resize);
   setInterval(() => {
-    if (document.hidden) return;
+    if (document.hidden || !isHacker()) return;
     const cs = getComputedStyle(document.documentElement);
     ctx.globalAlpha = .12; ctx.fillStyle = cs.getPropertyValue('--bg').trim(); ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.globalAlpha = .9; ctx.fillStyle = cs.getPropertyValue('--accent').trim(); ctx.font = fs + 'px JetBrains Mono, monospace';
+    ctx.globalAlpha = .9; ctx.fillStyle = cs.getPropertyValue('--accent').trim(); ctx.font = fs + 'px "IBM Plex Mono", monospace';
     cols.forEach((y, i) => { ctx.fillText(chars[Math.random() * chars.length | 0], i * fs * 3, y * fs); cols[i] = y * fs > cv.height && Math.random() > .97 ? 0 : y + .5; });
   }, 60);
 })();
