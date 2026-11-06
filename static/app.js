@@ -50,9 +50,8 @@ function toast(text, icon = 'sparkles') {
 }
 
 // ---------- API ----------
-// Настройки: groqKey — ключ Groq (console.groq.com → API Keys), youtubeId — ID видеогайда на YouTube
-// Ключ виден любому, кто откроет код сайта. Ставь лимиты в консоли Groq.
-const CONFIG = { groqKey: '', groqModel: 'llama-3.3-70b-versatile', youtubeId: '' };
+// Настройки: aiUrl — бесплатная нейросеть Pollinations (без ключа; '' — только встроенная база), youtubeId — ID видеогайда на YouTube
+const CONFIG = { aiUrl: 'https://text.pollinations.ai/openai', youtubeId: '' };
 let ME = null;            // пользователь; без входа прогресс не сохраняется
 let S = {};               // статистика текущего пользователя
 
@@ -715,13 +714,13 @@ const PROMPTS = {
     'достижения [[go:achievements]], AI-консультант [[go:ai]], профиль и награды [[go:profile]]. ' +
     'Если подходит раздел — добавь в конец ответа его метку. Сложные вопросы о безопасности отправляй к консультанту [[go:ai]]. ' + SAFETY,
 };
-// Нейросеть Groq прямо из браузера; без ключа или при сбое — встроенная база ответов
+// Бесплатная нейросеть прямо из браузера; при сбое или долгом ответе — встроенная база
 async function askAI(messages, mode) {
-  if (CONFIG.groqKey) try {
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + CONFIG.groqKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: CONFIG.groqModel, max_tokens: 500, temperature: 0.4,
+  if (CONFIG.aiUrl) try {
+    const r = await fetch(CONFIG.aiUrl, {
+      method: 'POST', signal: AbortSignal.timeout(30000),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'openai',
         messages: [{ role: 'system', content: PROMPTS[mode === 'helper' ? 'helper' : 'consultant'] }, ...messages.slice(-12)] }),
     });
     const reply = (await r.json()).choices?.[0]?.message?.content?.trim();
