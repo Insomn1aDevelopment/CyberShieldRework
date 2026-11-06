@@ -21,8 +21,8 @@ body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 var(--body);o
 /* режим хакера: строки развёртки поверх всего */
 :root[data-theme=dark] body::after{content:'';position:fixed;inset:0;z-index:70;pointer-events:none;
   background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,.18) 2px 3px)}
-#rain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.22;display:none}
-:root[data-theme=dark] #rain{display:block}
+#rain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.2}
+:root[data-theme=dark] #rain{opacity:.42}
 #confetti{position:fixed;inset:0;z-index:60;pointer-events:none}
 a{color:inherit}
 button,input,textarea{font:inherit;color:inherit}

@@ -732,20 +732,31 @@ themeBtn.onclick = () => {
   document.startViewTransition(apply);
 };
 
-// ---------- цифровой дождь (только в режиме хакера) ----------
+// ---------- поток кода на фоне: плотные колонки с разной скоростью, яркий символ на конце ----------
 (function rain() {
   if (REDUCED) return;
-  const cv = $('#rain'), ctx = cv.getContext('2d'), chars = '01КИБЕРЩИТ<>/{}#$';
-  let cols = [], fs = 14;
-  const resize = () => { cv.width = innerWidth; cv.height = innerHeight; cols = Array.from({ length: Math.ceil(cv.width / (fs * 3)) }, () => Math.random() * -50); };
+  const cv = $('#rain'), ctx = cv.getContext('2d');
+  const chars = '01010110{}[]()<>/=;:+-*#$&|!?_КИБЕРЩИТ', fs = 15, gap = fs * 1.15;
+  let cols = [];
+  const resize = () => {
+    cv.width = innerWidth; cv.height = innerHeight;
+    cols = Array.from({ length: Math.ceil(cv.width / gap) }, () => ({ y: Math.random() * -60, v: .35 + Math.random() * .8 }));
+  };
   resize(); addEventListener('resize', resize);
   setInterval(() => {
-    if (document.hidden || !isHacker()) return;
-    const cs = getComputedStyle(document.documentElement);
-    ctx.globalAlpha = .12; ctx.fillStyle = cs.getPropertyValue('--bg').trim(); ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.globalAlpha = .9; ctx.fillStyle = cs.getPropertyValue('--accent').trim(); ctx.font = fs + 'px "IBM Plex Mono", monospace';
-    cols.forEach((y, i) => { ctx.fillText(chars[Math.random() * chars.length | 0], i * fs * 3, y * fs); cols[i] = y * fs > cv.height && Math.random() > .97 ? 0 : y + .5; });
-  }, 60);
+    if (document.hidden) return;
+    const cs = getComputedStyle(document.documentElement), ch = () => chars[Math.random() * chars.length | 0];
+    ctx.globalAlpha = .1; ctx.fillStyle = cs.getPropertyValue('--bg').trim(); ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.font = fs + 'px "IBM Plex Mono", monospace';
+    const accent = cs.getPropertyValue('--accent').trim(), head = cs.getPropertyValue('--text').trim();
+    cols.forEach((c, i) => {
+      const y = c.y * fs;
+      ctx.globalAlpha = .75; ctx.fillStyle = accent; ctx.fillText(ch(), i * gap, y - fs);
+      ctx.globalAlpha = 1; ctx.fillStyle = head; ctx.fillText(ch(), i * gap, y);
+      c.y += c.v;
+      if (y > cv.height && Math.random() > .975) { c.y = Math.random() * -20; c.v = .35 + Math.random() * .8; }
+    });
+  }, 50);
 })();
 
 // ---------- запуск ----------
