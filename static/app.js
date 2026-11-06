@@ -50,8 +50,9 @@ function toast(text, icon = 'sparkles') {
 }
 
 // ---------- API ----------
-// Настройки: aiUrl — адрес Worker с нейросетью (папка worker/, см. README), youtubeId — ID видеогайда на YouTube
-const CONFIG = { aiUrl: '', youtubeId: '' };
+// Настройки: groqKey — ключ Groq (console.groq.com → API Keys), youtubeId — ID видеогайда на YouTube
+// Ключ виден любому, кто откроет код сайта. Ставь лимиты в консоли Groq.
+const CONFIG = { groqKey: '', groqModel: 'llama-3.3-70b-versatile', youtubeId: '' };
 let ME = null;            // пользователь; без входа прогресс не сохраняется
 let S = {};               // статистика текущего пользователя
 
@@ -693,11 +694,37 @@ function localReply(text, mode) {
   const route = mode === 'helper' && hit(AI_ROUTE_HINTS);
   return route ? `Вот подходящий раздел. [[go:${route[1]}]]` : hit(AI_FALLBACK)?.[1] || AI_FALLBACK_DEFAULT;
 }
-// Нейросеть через Worker; если он не настроен, перегружен или недоступен — встроенная база ответов
+const SAFETY =
+  'Аудитория — дети и подростки 10–17 лет из Беларуси. Пиши по-русски, просто и доброжелательно, коротко (до 120 слов), ' +
+  'без запугивания и страшных подробностей. Никогда не проси имя, адрес, телефон, школу, фото, пароли или данные карты. ' +
+  'Не помогай взламывать, обманывать или травить кого-либо — мягко откажи и объясни, почему это вредно и наказуемо. ' +
+  'Не обсуждай темы, не связанные с безопасностью в интернете, — вежливо верни разговор к теме. ' +
+  'Если ребёнку страшно, его травят, шантажируют или обманули — посоветуй сразу рассказать родителям или педагогу; ' +
+  'телефоны: милиция 102, Республиканская детская телефонная линия 8-801-100-16-11 (бесплатно, анонимно, круглосуточно). ' +
+  'Номера статей называй только если уверен: УК РБ ст. 209 (мошенничество), 212 (хищение путём модификации компьютерной информации), ' +
+  '222 (распространение чужих реквизитов карт; передача реквизитов своей карты за вознаграждение — ст. 12.35 КоАП, штраф), 349, 350, 352, 354, 355 (гл. 31); ' +
+  'уголовная ответственность в общем случае с 16 лет, за ст. 212 — с 14 лет (ст. 27 УК). Закон № 99-З «О защите персональных данных». ' +
+  'Иначе советуй проверить на pravo.by. Можно выделять **жирным** и делать списки через •.';
+
+const PROMPTS = {
+  consultant: 'Ты — КиберAI, консультант детской образовательной платформы «КиберЩит» по кибербезопасности. ' + SAFETY,
+  helper:
+    'Ты — помощник по сайту «КиберЩит». Отвечай 1–2 предложениями. Разделы сайта и метки перехода: ' +
+    'квиз-тренажёр [[go:quiz]], кибер-детектив [[go:detective]], кибер-сортировка [[go:sort]], режим «На выживание» [[go:survival]], найди подвох в сообщении мошенника [[go:spot]], проверка пароля [[go:password]], ' +
+    'база знаний [[go:kb]], советы и чеклист [[go:tips]], Уголовный кодекс [[go:uk]], Конституция [[go:constitution]], ' +
+    'достижения [[go:achievements]], AI-консультант [[go:ai]], профиль и награды [[go:profile]]. ' +
+    'Если подходит раздел — добавь в конец ответа его метку. Сложные вопросы о безопасности отправляй к консультанту [[go:ai]]. ' + SAFETY,
+};
+// Нейросеть Groq прямо из браузера; без ключа или при сбое — встроенная база ответов
 async function askAI(messages, mode) {
-  if (CONFIG.aiUrl) try {
-    const r = await fetch(CONFIG.aiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, mode }) });
-    const { reply } = await r.json();
+  if (CONFIG.groqKey) try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + CONFIG.groqKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: CONFIG.groqModel, max_tokens: 500, temperature: 0.4,
+        messages: [{ role: 'system', content: PROMPTS[mode === 'helper' ? 'helper' : 'consultant'] }, ...messages.slice(-12)] }),
+    });
+    const reply = (await r.json()).choices?.[0]?.message?.content?.trim();
     if (reply) return reply;
   } catch {}
   return localReply(messages.at(-1).content, mode);
