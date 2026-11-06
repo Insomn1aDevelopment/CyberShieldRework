@@ -50,18 +50,10 @@ function toast(text, icon = 'sparkles') {
 }
 
 // ---------- API ----------
-let CONFIG = { youtubeId: '', ai: false };
+// Настройки: aiUrl — адрес Worker с нейросетью (папка worker/, см. README), youtubeId — ID видеогайда на YouTube
+const CONFIG = { aiUrl: '', youtubeId: '' };
 let ME = null;            // пользователь; без входа прогресс не сохраняется
 let S = {};               // статистика текущего пользователя
-// Сервер нужен только для нейросети КиберAI; без него (GitHub Pages) запрос падает, и чат отвечает сам
-async function api(path, { body } = {}) {
-  const r = await fetch('/api' + path, {
-    method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body),
-  });
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
-  return d;
-}
 
 // ---------- аккаунт в куках: cs_acc — профиль, cs_prog — прогресс, cs_in — вход выполнен ----------
 // Базы нет: аккаунт живёт только в этом браузере. Пароль защищает от случайного входа, а не от владельца компьютера.
@@ -119,8 +111,8 @@ function updateNav() {
 // ---------- роутер ----------
 let timer = null, cleanups = [];
 const stopTimer = () => { clearInterval(timer); timer = null; };
-const routes = { '': home, quiz, detective, sort, survival, kb, tips, uk, constitution, achievements, ai, profile };
-const ROUTE_NAMES = { quiz: 'Квиз', detective: 'Детектив', sort: 'Сортировка', survival: 'На выживание', kb: 'База знаний', tips: 'Советы', uk: 'Уголовный кодекс', constitution: 'Конституция', achievements: 'Достижения', ai: 'КиберAI', profile: 'Профиль' };
+const routes = { '': home, quiz, detective, sort, survival, spot, kb, tips, password, uk, constitution, achievements, ai, profile };
+const ROUTE_NAMES = { quiz: 'Квиз', detective: 'Детектив', sort: 'Сортировка', survival: 'На выживание', spot: 'Найди подвох', kb: 'База знаний', tips: 'Советы', password: 'Проверка пароля', uk: 'Уголовный кодекс', constitution: 'Конституция', achievements: 'Достижения', ai: 'КиберAI', profile: 'Профиль' };
 const WIDE = ['profile', 'ai', 'achievements'];
 
 function render() {
@@ -150,10 +142,12 @@ const HOME_PLAY = [
   ['search', 'Кибер-детектив', () => `${CASES.length} дел по реальным схемам мошенников`, 'detective'],
   ['layers', 'Кибер-сортировка', () => 'Разложи ситуации на безопасные и опасные', 'sort'],
   ['infinity', 'На выживание', () => 'Правда или ложь на скорость, три жизни', 'survival'],
+  ['scan-eye', 'Найди подвох', () => `${SPOT.length} сообщений от мошенников — найди, где обман`, 'spot'],
 ];
 const HOME_LEARN = [
   ['book-open', 'База знаний', () => 'Угрозы, защита и куда обращаться за помощью', 'kb'],
   ['list-checks', 'Советы и чеклист', () => 'Простые правила и 12 шагов к защите', 'tips'],
+  ['key-round', 'Проверка пароля', () => 'Насколько быстро взломают твой пароль', 'password'],
   ['gavel', 'Уголовный кодекс', () => 'Что в сети считается преступлением', 'uk'],
   ['scroll-text', 'Конституция', () => 'Твои права и тайна переписки', 'constitution'],
   ['bot', 'КиберAI', () => 'Задай любой вопрос о безопасности', 'ai'],
@@ -495,6 +489,111 @@ function survival(app) {
   intro();
 }
 
+// ---------- найди подвох ----------
+function spot(app) {
+  let i = Math.max(0, SPOT.findIndex(m => !(S.spots || []).includes(m.id)));
+  const draw = () => {
+    const m = SPOT[i], flags = m.parts.filter(p => p[1]).length, found = new Set();
+    let misses = 0, over = false;
+    app.innerHTML = hero('scan-eye', '', 'Найди подвох', 'Нажимай на всё, что выдаёт мошенника. После трёх промахов подсказки откроются сами.') + `
+      <div class="spot">
+        <div class="hud"><span class="chip">${ic('mail')} ${i + 1} из ${SPOT.length}</span><span class="chip">${ic('scan-eye')} <span id="cnt">0/${flags}</span></span><span class="chip"><span class="hearts" id="hp">${ic('heart').repeat(3)}</span></span></div>
+        <div class="card spot-msg" id="msg"><div class="spot-head"><span class="ico">${ic(m.icon)}</span><div><b>${esc(m.from)}</b><small>${esc(m.kind)}</small></div></div>
+          <p class="spot-text">${m.parts.map(([t], k) => t.trim().length < 3 ? esc(t) : `<span class="sp" role="button" tabindex="0" data-k="${k}">${esc(t)}</span>`).join('')}</p></div>
+        <div id="notes"></div><div id="after"></div>${guestHint()}</div>`;
+    const note = k => $('#notes', app).insertAdjacentHTML('beforeend',
+      `<div class="explain spot-note"><b>${ic('triangle-alert')} «${esc(m.parts[k][0].trim())}»</b> ${esc(m.parts[k][1])}</div>`);
+    const finish = win => {
+      over = true;
+      if (win) addTo('spots', m.id);
+      m.parts.forEach(([, e], k) => { if (e && !found.has(k)) { $(`[data-k="${k}"]`, app).classList.add('missed'); note(k); } });
+      const last = i === SPOT.length - 1;
+      $('#after', app).innerHTML = `<div class="explain ${win ? 'is-ok' : 'is-bad'}"><b>${win ? ic('badge-check') + ' Все подвохи найдены!' : ic('circle-x') + ' Мошенник почти обманул.'}</b>
+        ${win ? 'Такое сообщение лучше сразу удалить и показать взрослым.' : 'Подсказки к пропущенным подвохам — выше.'}</div>
+        <div class="row" style="margin-top:14px">${last ? '' : '<button class="btn acc sm" id="nx">Следующее сообщение</button>'}<button class="btn sm" id="rt">${ic('refresh-cw')} Пройти заново</button></div>`;
+      if (!last) $('#nx', app).onclick = () => { i++; draw(); };
+      $('#rt', app).onclick = draw;
+    };
+    const pick = el => {
+      if (over || el.classList.contains('hit') || el.classList.contains('miss')) return;
+      const k = +el.dataset.k;
+      if (m.parts[k][1]) {
+        el.classList.add('hit'); found.add(k); note(k);
+        $('#cnt', app).textContent = `${found.size}/${flags}`;
+        if (found.size === flags) finish(true);
+      } else {
+        el.classList.add('miss'); misses++;
+        $$('#hp svg', app)[3 - misses]?.classList.add('lost');
+        const msg = $('#msg', app); msg.classList.remove('shake'); void msg.offsetWidth; msg.classList.add('shake');
+        if (misses >= 3) finish(false);
+      }
+    };
+    $$('.sp', app).forEach(el => {
+      el.onclick = () => pick(el);
+      el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(el); } };
+    });
+  };
+  draw();
+}
+
+// ---------- проверка пароля (всё считается в браузере, пароль никуда не отправляется) ----------
+function pwCheck(pw) {
+  const low = pw.toLowerCase();
+  const tests = [
+    [pw.length >= 12, 'Не короче 12 символов'],
+    [/[a-zа-яё]/.test(pw) && /[A-ZА-ЯЁ]/.test(pw), 'Есть строчные и заглавные буквы'],
+    [/\d/.test(pw), 'Есть цифры'],
+    [/[^\p{L}\d]/u.test(pw), 'Есть символы: - ! ? # и другие'],
+    [pw.length > 0 && !COMMON_PW.some(c => low.includes(c)) && !/(.)\1\1/.test(pw), 'Нет популярных паролей и повторов вроде «aaa»'],
+  ];
+  const pool = [[/[a-z]/, 26], [/[A-Z]/, 26], [/[а-яё]/, 33], [/[А-ЯЁ]/, 33], [/\d/, 10], [/[^\p{L}\d]/u, 33]].reduce((n, [re, k]) => n + (re.test(pw) ? k : 0), 0);
+  // ponytail: грубая оценка полного перебора (10 млрд вариантов в секунду); словарные атаки учтены только списком COMMON_PW
+  const bits = tests[4][0] ? pw.length * Math.log2(pool || 1) : Math.min(20, pw.length * 2);
+  const secs = 2 ** bits / 1e10 / 2;
+  // оценка по времени взлома: меньше часа, года, тысячи лет
+  const score = !pw ? 0 : secs < 3600 ? 1 : secs < 3.2e7 ? 2 : secs < 3.2e10 ? 3 : 4;
+  return { tests, score, secs };
+}
+const crackTime = s => [[1, 'меньше секунды'], [60, 'несколько секунд'], [3600, 'несколько минут'], [86400, 'несколько часов'], [2.6e6, 'несколько дней'],
+  [3.2e7, 'несколько месяцев'], [3.2e9, 'годы'], [3.2e10, 'века'], [3.2e13, 'тысячи лет']].find(([lim]) => s < lim)?.[1] || 'миллионы лет';
+const PW_LEVELS = ['Начни вводить пароль', 'Слабый', 'Так себе', 'Хороший', 'Отличный'];
+const rnd = n => crypto.getRandomValues(new Uint32Array(1))[0] % n;
+const genPassphrase = () => {
+  const ws = new Set(); while (ws.size < 3) ws.add(PW_WORDS[rnd(PW_WORDS.length)]);
+  return [...ws].map(w => w[0].toUpperCase() + w.slice(1)).join('-') + '-' + (rnd(90) + 10) + '!?#$%&*'[rnd(7)];
+};
+
+function password(app) {
+  app.innerHTML = hero('key-round', '', 'Проверка пароля', 'Узнай, сколько времени понадобится взломщику. Пароль проверяется прямо в браузере и никуда не отправляется.') + `
+    <div class="card">
+      <label class="field" for="pw"><span>Введи пароль</span></label>
+      <div class="pw-in"><input class="in" id="pw" type="password" autocomplete="off" spellcheck="false" placeholder="Например: Кот-Луна-Ракета-42!"><button class="btn sm" id="eye" type="button" aria-label="Показать пароль">${ic('eye')}</button></div>
+      <div class="pw-meter" id="meter" data-s="0"><i></i><i></i><i></i><i></i></div>
+      <div class="pw-verdict" aria-live="polite"><b id="lvl">${PW_LEVELS[0]}</b><span id="time"></span></div>
+      <ul class="pw-tests" id="tests"></ul>
+    </div>
+    <h2 class="label">Пароль-фраза</h2>
+    <div class="card"><p class="muted" style="margin-top:0">Три случайных слова, число и символ. Такой пароль легко запомнить и очень трудно подобрать.</p>
+      <div class="pw-gen"><code id="gen"></code><button class="btn sm" id="regen">${ic('dices')} Другая</button><button class="btn sm" id="copy">${ic('copy')} Копировать</button><button class="btn acc sm" id="try">Проверить</button></div>
+    </div>`;
+  const pw = $('#pw', app), gen = $('#gen', app);
+  const update = () => {
+    const { tests, score, secs } = pwCheck(pw.value);
+    $('#meter', app).dataset.s = score;
+    $('#lvl', app).textContent = PW_LEVELS[score];
+    $('#time', app).textContent = pw.value ? 'Взлом перебором: ' + crackTime(secs) : '';
+    $('#tests', app).innerHTML = tests.map(([ok, t]) => `<li class="${ok ? 'ok' : ''}">${ic(ok ? 'circle-check' : 'circle')} ${t}</li>`).join('');
+    if (score === 4) flag('pwStrong');
+  };
+  pw.oninput = update;
+  $('#eye', app).onclick = () => { const show = pw.type === 'password'; pw.type = show ? 'text' : 'password'; $('#eye', app).innerHTML = ic(show ? 'eye-off' : 'eye'); $('#eye', app).setAttribute('aria-label', show ? 'Скрыть пароль' : 'Показать пароль'); };
+  const regen = () => { gen.textContent = genPassphrase(); };
+  $('#regen', app).onclick = regen;
+  $('#copy', app).onclick = () => navigator.clipboard?.writeText(gen.textContent).then(() => toast('Скопировано', 'copy'), () => toast('Не удалось скопировать', 'triangle-alert'));
+  $('#try', app).onclick = () => { pw.value = gen.textContent; pw.type = 'text'; update(); pw.focus(); };
+  regen(); update();
+}
+
 // ---------- база знаний ----------
 function kb(app) {
   const tabs = [['threats', 'triangle-alert', 'Угрозы'], ['protect', 'shield-check', 'Защита'], ['laws', 'scale', 'Законы РБ'], ['help', 'life-buoy', 'Помощь']];
@@ -594,9 +693,13 @@ function localReply(text, mode) {
   const route = mode === 'helper' && hit(AI_ROUTE_HINTS);
   return route ? `Вот подходящий раздел. [[go:${route[1]}]]` : hit(AI_FALLBACK)?.[1] || AI_FALLBACK_DEFAULT;
 }
-// Сервер с ключом — живой ИИ; без сервера (GitHub Pages), без ключа или при сбое — встроенная база
+// Нейросеть через Worker; если он не настроен, перегружен или недоступен — встроенная база ответов
 async function askAI(messages, mode) {
-  try { const { reply } = await api('/ai', { body: { messages, mode } }); if (reply) return reply; } catch {}
+  if (CONFIG.aiUrl) try {
+    const r = await fetch(CONFIG.aiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, mode }) });
+    const { reply } = await r.json();
+    if (reply) return reply;
+  } catch {}
   return localReply(messages.at(-1).content, mode);
 }
 function ai(app) {
@@ -763,6 +866,5 @@ themeBtn.onclick = () => {
 (async function boot() {
   syncThemeBtn();
   loadAccount();
-  try { CONFIG = { ...CONFIG, ...(await api('/config')) }; } catch {}
   updateNav(); render();
 })();
