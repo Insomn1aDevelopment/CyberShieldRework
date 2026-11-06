@@ -50,8 +50,9 @@ function toast(text, icon = 'sparkles') {
 }
 
 // ---------- API ----------
-// Настройки: aiUrl — бесплатная нейросеть Pollinations (без ключа; '' — только встроенная база), youtubeId — ID видеогайда на YouTube
-const CONFIG = { aiUrl: 'https://text.pollinations.ai/openai', youtubeId: '' };
+
+// Настройки: youtubeId — ID видеогайда на YouTube
+const CONFIG = { youtubeId: '' };
 let ME = null;            // пользователь; без входа прогресс не сохраняется
 let S = {};               // статистика текущего пользователя
 
@@ -111,9 +112,8 @@ function updateNav() {
 // ---------- роутер ----------
 let timer = null, cleanups = [];
 const stopTimer = () => { clearInterval(timer); timer = null; };
-const routes = { '': home, quiz, detective, sort, survival, spot, kb, tips, password, uk, constitution, achievements, ai, profile };
-const ROUTE_NAMES = { quiz: 'Квиз', detective: 'Детектив', sort: 'Сортировка', survival: 'На выживание', spot: 'Найди подвох', kb: 'База знаний', tips: 'Советы', password: 'Проверка пароля', uk: 'Уголовный кодекс', constitution: 'Конституция', achievements: 'Достижения', ai: 'КиберAI', profile: 'Профиль' };
-const WIDE = ['profile', 'ai', 'achievements'];
+const routes = { '': home, quiz, detective, sort, survival, spot, kb, tips, password, uk, constitution, achievements, profile };
+const WIDE = ['profile', 'achievements'];
 
 function render() {
   stopTimer(); document.onkeydown = null;
@@ -150,7 +150,6 @@ const HOME_LEARN = [
   ['key-round', 'Проверка пароля', () => 'Насколько быстро взломают твой пароль', 'password'],
   ['gavel', 'Уголовный кодекс', () => 'Что в сети считается преступлением', 'uk'],
   ['scroll-text', 'Конституция', () => 'Твои права и тайна переписки', 'constitution'],
-  ['bot', 'КиберAI', () => 'Задай любой вопрос о безопасности', 'ai'],
 ];
 const homeList = items => `<div class="menu">${items.map(([i, t, d, h]) => `<a href="#/${h}"><span class="ico">${ic(i)}</span><span><b>${t}</b><small>${d()}</small></span></a>`).join('')}</div>`;
 function home(app) {
@@ -682,79 +681,6 @@ function achievements(app) {
   };
 }
 
-// ---------- AI ----------
-const fmt = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-  .replace(/\[\[go:(\w+)\]\]/g, (m, r) => ROUTE_NAMES[r] ? `<a class="go-btn" href="#/${r}">${ROUTE_NAMES[r]}</a>` : '');
-const TYPING = '<span class="typing"><i></i><i></i><i></i></span>';
-const AI_HELLO = 'Привет! Я КиберAI. Помогаю разобраться, как оставаться в безопасности в интернете.\n\nМожно спросить:\n• как распознать обман\n• как защитить аккаунт\n• что говорят законы Беларуси\n• что делать, если что-то случилось\n\nВыбери тему или напиши свой вопрос. Не пиши мне своё имя, адрес, телефон и пароли.';
-let aiHistory = [];
-function localReply(text, mode) {
-  const t = text.toLowerCase(), hit = list => list.find(([keys]) => keys.some(k => t.includes(k)));
-  const route = mode === 'helper' && hit(AI_ROUTE_HINTS);
-  return route ? `Вот подходящий раздел. [[go:${route[1]}]]` : hit(AI_FALLBACK)?.[1] || AI_FALLBACK_DEFAULT;
-}
-const SAFETY =
-  'Аудитория — дети и подростки 10–17 лет из Беларуси. Пиши по-русски, просто и доброжелательно, коротко (до 120 слов), ' +
-  'без запугивания и страшных подробностей. Никогда не проси имя, адрес, телефон, школу, фото, пароли или данные карты. ' +
-  'Не помогай взламывать, обманывать или травить кого-либо — мягко откажи и объясни, почему это вредно и наказуемо. ' +
-  'Не обсуждай темы, не связанные с безопасностью в интернете, — вежливо верни разговор к теме. ' +
-  'Если ребёнку страшно, его травят, шантажируют или обманули — посоветуй сразу рассказать родителям или педагогу; ' +
-  'телефоны: милиция 102, Республиканская детская телефонная линия 8-801-100-16-11 (бесплатно, анонимно, круглосуточно). ' +
-  'Номера статей называй только если уверен: УК РБ ст. 209 (мошенничество), 212 (хищение путём модификации компьютерной информации), ' +
-  '222 (распространение чужих реквизитов карт; передача реквизитов своей карты за вознаграждение — ст. 12.35 КоАП, штраф), 349, 350, 352, 354, 355 (гл. 31); ' +
-  'уголовная ответственность в общем случае с 16 лет, за ст. 212 — с 14 лет (ст. 27 УК). Закон № 99-З «О защите персональных данных». ' +
-  'Иначе советуй проверить на pravo.by. Можно выделять **жирным** и делать списки через •.';
-
-const PROMPTS = {
-  consultant: 'Ты — КиберAI, консультант детской образовательной платформы «КиберЩит» по кибербезопасности. ' + SAFETY,
-  helper:
-    'Ты — помощник по сайту «КиберЩит». Отвечай 1–2 предложениями. Разделы сайта и метки перехода: ' +
-    'квиз-тренажёр [[go:quiz]], кибер-детектив [[go:detective]], кибер-сортировка [[go:sort]], режим «На выживание» [[go:survival]], найди подвох в сообщении мошенника [[go:spot]], проверка пароля [[go:password]], ' +
-    'база знаний [[go:kb]], советы и чеклист [[go:tips]], Уголовный кодекс [[go:uk]], Конституция [[go:constitution]], ' +
-    'достижения [[go:achievements]], AI-консультант [[go:ai]], профиль и награды [[go:profile]]. ' +
-    'Если подходит раздел — добавь в конец ответа его метку. Сложные вопросы о безопасности отправляй к консультанту [[go:ai]]. ' + SAFETY,
-};
-// Бесплатная нейросеть прямо из браузера; при сбое или долгом ответе — встроенная база
-async function askAI(messages, mode) {
-  if (CONFIG.aiUrl) try {
-    const r = await fetch(CONFIG.aiUrl, {
-      method: 'POST', signal: AbortSignal.timeout(30000),
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'openai',
-        messages: [{ role: 'system', content: PROMPTS[mode === 'helper' ? 'helper' : 'consultant'] }, ...messages.slice(-12)] }),
-    });
-    const reply = (await r.json()).choices?.[0]?.message?.content?.trim();
-    if (reply) return reply;
-  } catch {}
-  return localReply(messages.at(-1).content, mode);
-}
-function ai(app) {
-  app.innerHTML = hero('bot', 'Консультант', 'КиберAI', 'Задай вопрос о безопасности в интернете, своих правах или законах Беларуси') + `
-    <div class="chat-wrap"><div class="card topics" style="padding:16px"><div class="label" style="margin:0 0 4px">Быстрые темы</div>
-      ${AI_TOPICS.map(([i, t]) => `<button data-q="${esc(t)}">${ic(i)} ${esc(t)}</button>`).join('')}</div>
-    <div class="card chat"><div class="chat-head"><span class="ai-badge">${ic('bot')}</span><div><h3 style="font-size:17px">КиберAI</h3><small><i></i> Отвечает на вопросы о безопасности в сети</small></div><button class="btn sm" id="clear">${ic('trash-2')} Очистить</button></div>
-      <div class="msgs" id="msgs"></div>
-      <form id="f"><input class="in" id="q" placeholder="Напиши вопрос..." maxlength="1500" autocomplete="off"><button class="send" aria-label="Отправить">${ic('send')}</button></form></div></div>
-    <p class="muted" style="font-size:12px;text-align:center;margin-top:12px">КиберAI может ошибаться. Если случилось что-то серьёзное — обязательно расскажи взрослым.</p>`;
-  const msgs = $('#msgs', app);
-  const add = (role, html) => { const d = document.createElement('div'); d.className = 'msg ' + (role === 'user' ? 'me' : 'bot'); d.innerHTML = html; msgs.append(d); msgs.scrollTop = msgs.scrollHeight; return d; };
-  const draw = () => { msgs.innerHTML = ''; add('assistant', fmt(AI_HELLO)); aiHistory.forEach(m => add(m.role, fmt(m.content))); };
-  let busy = false;
-  const send = async text => {
-    text = text.trim(); if (!text || busy) return;
-    busy = true; aiHistory.push({ role: 'user', content: text }); add('user', esc(text)); bump('aiMsgs');
-    const wait = add('assistant', TYPING);
-    const reply = await askAI(aiHistory, 'consultant');
-    aiHistory.push({ role: 'assistant', content: reply });
-    if (wait.isConnected) { wait.innerHTML = fmt(reply); msgs.scrollTop = msgs.scrollHeight; }
-    busy = false;
-  };
-  $('#f', app).onsubmit = e => { e.preventDefault(); const q = $('#q', app); send(q.value); q.value = ''; };
-  $$('[data-q]', app).forEach(b => b.onclick = () => send(b.dataset.q));
-  $('#clear', app).onclick = () => { aiHistory = []; draw(); };
-  draw();
-}
-
 // ---------- профиль ----------
 function profile(app) { ME ? cabinet(app) : authForm(app, cookie.get('cs_acc') ? 'login' : 'register'); }
 function authForm(app, mode) {
@@ -827,25 +753,6 @@ function cabinet(app, tab = 'ach') {
     };
   }
 }
-
-// ---------- виджет-помощник ----------
-const wMsgs = $('#wMsgs');
-const wAdd = (cls, html) => { const d = document.createElement('div'); d.className = 'msg ' + cls; d.innerHTML = html; wMsgs.append(d); wMsgs.scrollTop = 1e9; return d; };
-$('#wBtn').onclick = () => { const p = $('#wPanel'); p.hidden = !p.hidden; if (!p.hidden) $('#wInput').focus(); };
-$('#wClose').onclick = () => $('#wPanel').hidden = true;
-$$('.w-chips button').forEach(b => b.onclick = () => { location.hash = '#/' + b.dataset.go; });
-wMsgs.addEventListener('click', e => { if (e.target.closest('.go-btn') && innerWidth < 780) $('#wPanel').hidden = true; });
-const wHistory = [];
-$('#wForm').onsubmit = async e => {
-  e.preventDefault();
-  const q = $('#wInput').value.trim(); if (!q) return;
-  $('#wInput').value = ''; wAdd('me', esc(q));
-  wHistory.push({ role: 'user', content: q });
-  const wait = wAdd('bot', TYPING);
-  const reply = await askAI(wHistory.slice(-6), 'helper');
-  wHistory.push({ role: 'assistant', content: reply });
-  wait.innerHTML = fmt(reply);
-};
 
 // ---------- тема ----------
 const themeBtn = $('#theme');

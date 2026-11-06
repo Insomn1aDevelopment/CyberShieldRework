@@ -74,7 +74,6 @@ main>*{animation:enter .3s ease-out both}
 .hero h1{font-size:clamp(24px,6.5vw,52px);hyphens:auto;overflow-wrap:break-word}
 .hero p{color:var(--muted);max-width:440px;margin:12px auto}
 .label{display:flex;align-items:center;gap:8px;font:700 20px/1.2 var(--head);margin:40px 0 14px}
-.topics .label{font-size:15px}
 :root[data-theme=dark] .label::before{content:'> ';color:var(--accent)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:26px;box-shadow:var(--shadow)}
 .card+.card{margin-top:14px}
@@ -321,34 +320,9 @@ h2,h3{hyphens:auto;overflow-wrap:break-word}
 .lockwall .ico{width:72px;height:72px;border-radius:22px;margin-bottom:16px}
 .lockwall .ico svg{width:34px;height:34px}
 
-/* ---------- чат ---------- */
-.chat-wrap{display:grid;grid-template-columns:220px 1fr;gap:16px}
-.topics{display:grid;gap:8px;align-content:start}
-.topics button{display:flex;gap:8px;align-items:center;text-align:left;padding:10px 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--card2);font-size:14px;transition:border-color .15s}
-.topics button svg{color:var(--accent)}
-.topics button:hover{border-color:var(--accent)}
-.chat{display:flex;flex-direction:column;padding:0;overflow:hidden;height:580px}
-.chat-head{display:flex;gap:12px;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
-.chat-head small{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-.chat-head small i{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
-.chat-head .btn{margin-left:auto;flex:none}
-.chat-head>div{min-width:0}
-.ai-badge{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--on-accent);flex:none}
-.msgs{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
-.msg{max-width:85%;padding:12px 16px;border-radius:var(--r);font-size:15px;white-space:pre-wrap;word-wrap:break-word;animation:msg .25s ease-out both}
 @keyframes msg{from{opacity:0;transform:translateY(8px)}}
-.msg.bot{background:var(--card2);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
-.msg.me{background:var(--accent);color:var(--on-accent);align-self:flex-end;border-bottom-right-radius:4px}
-.go-btn{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:6px 14px;border-radius:99px;background:var(--accent);color:var(--on-accent);text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap}
-.typing{display:inline-flex;gap:4px}
-.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bounce 1s infinite}
-.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
-@keyframes bounce{50%{transform:translateY(-5px)}}
-.chat form{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--line)}
 input.in,textarea.in{width:100%;padding:12px 14px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--card2);outline:none;transition:border-color .15s,box-shadow .15s}
 input.in:focus,textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.send{flex:none;display:grid;place-items:center;width:46px;border-radius:var(--r-sm);border:0;background:var(--accent);color:var(--on-accent)}
-.send:hover{background:var(--accent-deep)}
 
 /* ---------- профиль ---------- */
 .prof{display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start}
@@ -365,27 +339,7 @@ input.in:focus,textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 3px
 .note svg{color:var(--accent);margin-top:3px}
 .err{color:var(--bad);font-size:14px;min-height:20px;margin-bottom:6px}
 
-/* ---------- виджет и уведомления ---------- */
-.widget{position:fixed;right:16px;bottom:16px;z-index:40}
-.w-btn{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;border:0;color:var(--on-accent);background:var(--accent);box-shadow:0 6px 20px -6px rgba(13,26,46,.4);position:relative;transition:transform .15s}
-:root[data-theme=dark] .w-btn{border-radius:var(--r);box-shadow:0 0 18px rgba(57,255,106,.35)}
-.w-btn svg{width:26px;height:26px}
-.w-btn:hover{transform:scale(1.06)}
-.w-panel{position:absolute;right:0;bottom:68px;width:320px;max-width:calc(100vw - 32px);background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 16px 48px rgba(13,26,46,.2);overflow:hidden;transform-origin:bottom right;animation:wopen .2s ease-out}
-@keyframes wopen{from{opacity:0;transform:scale(.92) translateY(8px)}}
-.w-head{display:flex;gap:10px;align-items:center;padding:14px 16px;background:var(--card2)}
-.w-head small{display:block;color:var(--muted);font-size:12px}
-.w-head button{margin-left:auto;border:0;background:none;display:grid;width:32px;height:32px;place-items:center}
-.w-msgs{max-height:260px;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
-.w-msgs .msg{font-size:14px}
-.w-chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px;border-top:1px solid var(--line)}
-.w-chips button{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);font-size:13px}
-.w-chips button:hover{border-color:var(--accent)}
-#wForm{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
-#wForm input{flex:1;padding:10px 12px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--card);outline:none}
-#wForm input:focus{border-color:var(--accent)}
-#wForm button{border:0;border-radius:var(--r-sm);width:40px;display:grid;place-items:center;background:var(--accent);color:var(--on-accent)}
-.w-full{display:flex;justify-content:center;align-items:center;gap:6px;padding:12px;border-top:1px solid var(--line);font-size:14px;color:var(--accent);text-decoration:none}
+/* ---------- уведомления ---------- */
 #toasts{position:fixed;top:66px;right:16px;z-index:50;display:grid;gap:8px}
 .toast{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-sm);padding:12px 16px;font-size:14px;font-weight:600;box-shadow:0 10px 30px rgba(13,26,46,.14);animation:toast .3s ease-out}
 .toast svg{color:var(--accent)}
@@ -435,13 +389,8 @@ input.in:focus,textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 3px
   .nav nav>a,.dd>button{padding:0 6px;font-size:11px}
   .logo{display:none}
   .dd-menu{position:fixed;top:56px;left:16px;right:16px}
-  .chat-wrap,.prof{grid-template-columns:1fr}
-  .topics{display:flex;overflow-x:auto}
-  .topics .label{display:none}
-  .topics button{flex:none;white-space:nowrap}
-  .chat{height:70vh}
+  .prof{grid-template-columns:1fr}
   .card{padding:18px}
-  .card.chat{padding:0}
   .menu{grid-template-columns:1fr}
   .menu a:nth-child(odd){border-right:0}
   .guest{flex-direction:column;text-align:center}
