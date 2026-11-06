@@ -383,7 +383,6 @@ const ACHIEVEMENTS = [
   { cat: 'Особые', id: 'checklist_full', icon: 'list-checks', title: 'Под защитой', desc: 'Выполнить чеклист 12 из 12', test: s => s.checklistFull },
   { cat: 'Особые', id: 'ai_talk', icon: 'bot', title: 'Любопытный', desc: 'Задать вопрос КиберAI', test: s => s.aiMsgs >= 1 },
   { cat: 'Особые', id: 'registered', icon: 'user', title: 'Добро пожаловать', desc: 'Создать аккаунт', test: s => s.registered },
-  { cat: 'Особые', id: 'poster', icon: 'pen-line', title: 'Первая запись', desc: 'Опубликовать запись в ленте', test: s => s.posts >= 1 },
 ];
 const ACH_CATS = [['Квиз', 'target'], ['Детектив', 'search'], ['Игры', 'gamepad-2'], ['Особые', 'sparkles']];
 

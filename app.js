@@ -62,36 +62,58 @@ function toast(text, icon = 'sparkles') {
 }
 
 // ---------- API ----------
-let CONFIG = { turnstileSiteKey: '', youtubeId: '', ai: false };
+let CONFIG = { youtubeId: '', ai: false };
 let ME = null;            // пользователь; без входа прогресс не сохраняется
 let S = {};               // статистика текущего пользователя
-const token = () => ls.get('cs_token');
-async function api(path, { method, body } = {}) {
-  let r;
-  try {
-    r = await fetch('/api' + path, {
-      method: method || (body ? 'POST' : 'GET'),
-      headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: 'Bearer ' + token() } : {}) },
-      body: body && JSON.stringify(body),
-    });
-  } catch { throw new Error('Нет связи с сервером. Проверь интернет.'); }
-  const d = await r.json().catch(() => ({}));
-  if (r.status === 401 && token() && path !== '/login') { signOutLocal(); render(); }
+// Сервер нужен только для нейросети КиберAI; без него (GitHub Pages) запрос падает, и чат отвечает сам
+async function api(path, { body } = {}) {
+  const r = await fetch('/api' + path, {
+    method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body),
+  });
+  const d = await r.json();
   if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
   return d;
 }
 
+// ---------- аккаунт в куках: cs_acc — профиль, cs_prog — прогресс, cs_in — вход выполнен ----------
+// Базы нет: аккаунт живёт только в этом браузере. Пароль защищает от случайного входа, а не от владельца компьютера.
+const COOKIE_PATH = location.pathname.replace(/[^/]*$/, '');
+const cookie = {
+  get(k) {
+    const m = document.cookie.match('(?:^|; )' + k + '=([^;]*)');
+    try { return m ? JSON.parse(decodeURIComponent(m[1])) : null; } catch { return null; }
+  },
+  set(k, v) { // false — значение не влезло в лимит куки (~4 КБ)
+    const s = v == null ? '' : encodeURIComponent(JSON.stringify(v));
+    document.cookie = `${k}=${s};path=${COOKIE_PATH};max-age=${v == null ? 0 : 31536000};SameSite=Lax${location.protocol === 'https:' ? ';Secure' : ''}`;
+    return s.length < 4000;
+  },
+};
+const hashPw = async (nick, pw) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(nick.toLowerCase() + ':' + pw)))]
+  .map(b => b.toString(16).padStart(2, '0')).join('');
+function loadAccount() {
+  const a = cookie.get('cs_acc');
+  if (!a || !cookie.get('cs_in')) return;
+  const p = cookie.get('cs_prog') || {};
+  ME = { nick: a.nick, display_name: a.name || '', bio: a.bio || '', created_at: a.at,
+    achievements: Object.entries(p.a || {}).map(([id, t]) => ({ id, unlocked_at: t })) };
+  S = { ...p.s, registered: 1 };
+}
+const storeProfile = pw => cookie.set('cs_acc', { nick: ME.nick, name: ME.display_name, bio: ME.bio, at: ME.created_at, pw: pw || cookie.get('cs_acc')?.pw });
+function storeProgress() {
+  if (!cookie.set('cs_prog', { s: S, a: Object.fromEntries(ME.achievements.map(a => [a.id, a.unlocked_at])) }))
+    toast('Прогресс не поместился в куки и не сохранён', 'triangle-alert');
+}
+
 // ---------- прогресс и достижения (только с аккаунтом) ----------
 const gotIds = () => new Set([...(ME?.achievements || []).map(a => a.id), ...(ME ? ACHIEVEMENTS.filter(a => a.test(S)).map(a => a.id) : [])]);
-let syncT;
 function save() {
   if (!ME) return;
   const known = new Set(ME.achievements.map(a => a.id));
   const fresh = ACHIEVEMENTS.filter(a => a.test(S) && !known.has(a.id));
   fresh.forEach((a, i) => setTimeout(() => toast('Новое достижение: ' + a.title, a.icon), i * 400));
-  if (fresh.length) { confetti(); ME.achievements.push(...fresh.map(a => ({ id: a.id, unlocked_at: new Date().toISOString() }))); }
-  clearTimeout(syncT);
-  syncT = setTimeout(() => api('/progress', { body: { stats: S, achievements: [...gotIds()] } }).then(d => { if (ME) ME.achievements = d.user.achievements; }).catch(() => {}), fresh.length ? 0 : 1200);
+  if (fresh.length) { confetti(); ME.achievements.push(...fresh.map(a => ({ id: a.id, unlocked_at: Date.now() }))); }
+  storeProgress();
 }
 const bump = (k, n = 1) => { S[k] = (S[k] || 0) + n; save(); };
 const setMax = (k, v) => { if (v > (S[k] || 0)) { S[k] = v; save(); } };
@@ -99,10 +121,7 @@ const flag = k => { if (!S[k]) { S[k] = 1; save(); } };
 const addTo = (k, v) => { if (!(S[k] || []).includes(v)) { S[k] = [...(S[k] || []), v]; save(); } };
 const guestHint = () => ME ? '' : `<p class="muted" style="font-size:14px">${ic('lock')} Результат не сохранится. <a href="#/profile">Войди или создай аккаунт</a>, чтобы копить прогресс и получать награды.</p>`;
 
-function signIn(d) {
-  ls.set('cs_token', d.token); ME = d.user; S = { ...ME.stats, registered: 1 }; updateNav();
-}
-function signOutLocal() { ls.set('cs_token', null); ME = null; S = {}; updateNav(); }
+function signOut() { cookie.set('cs_in', null); ME = null; S = {}; updateNav(); }
 function updateNav() {
   $('#navAch').classList.toggle('locked', !ME);
   $('#navAch').title = ME ? '' : 'Доступно после входа';
@@ -136,8 +155,6 @@ document.addEventListener('click', () => $$('.dd').forEach(d => d.classList.remo
 const hero = (icon, pill, title, sub) => `<section class="hero"><span class="pill">${ic(icon)} ${pill}</span><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ''}</section>`;
 const statCards = items => `<div class="grid">${items.map(([v, l, c, suf]) => `<div class="stat rv"><b class="${c || ''}" data-count="${v}" data-suf="${suf || ''}">0</b><span>${l}</span></div>`).join('')}</div>`;
 const accuracy = () => S.answered ? Math.round(S.correct / S.answered * 100) : 0;
-const parseDate = s => new Date(s.replace(' ', 'T') + 'Z');
-const fmtDate = s => parseDate(s).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 // ---------- главная ----------
 function home(app) {
@@ -557,7 +574,7 @@ const lockWall = (app, title, text) => {
   app.innerHTML = `<div class="card lockwall"><span class="ico">${ic('lock')}</span><h2 style="font-size:28px">${title}</h2><p class="muted" style="max-width:420px;margin:10px auto 20px">${text}</p><a class="btn acc" href="#/profile">${ic('user')} Войти или создать аккаунт</a></div>`;
 };
 function achievements(app) {
-  if (!ME) return lockWall(app, 'Достижения', 'Награды привязаны к аккаунту и хранятся на сервере. Войди, чтобы получать их и видеть свой прогресс на любом устройстве.');
+  if (!ME) return lockWall(app, 'Достижения', 'Награды привязаны к аккаунту. Создай его — он хранится прямо в этом браузере, почта и телефон не нужны.');
   const got = gotIds(), n = got.size, pct = Math.round(n / ACHIEVEMENTS.length * 100);
   const dates = Object.fromEntries(ME.achievements.map(a => [a.id, a.unlocked_at]));
   app.innerHTML = hero('trophy', 'Коллекция наград', 'Достижения', 'Награды сохраняются в твоём аккаунте') + `
@@ -567,12 +584,12 @@ function achievements(app) {
     <div style="margin:16px 0">${statCards([[S.games || 0, 'Игр сыграно', 'c-acc'], [S.best || 0, 'Лучший счёт', 'c-ok'], [accuracy(), 'Точность', '', '%'], [S.answered || 0, 'Ответов']])}</div>
     ${ACH_CATS.map(([cat, icon]) => { const list = ACHIEVEMENTS.filter(a => a.cat === cat); return `
       <div class="row" style="justify-content:space-between;margin:28px 0 12px"><h2 style="font-size:20px;display:flex;gap:8px;align-items:center">${ic(icon)} ${cat}</h2><small class="muted">${list.filter(a => got.has(a.id)).length}/${list.length}</small></div>
-      <div class="grid">${list.map(a => `<div class="ach tilt rv ${got.has(a.id) ? 'got' : 'locked'}"><span class="ico">${ic(got.has(a.id) ? a.icon : 'lock')}</span><b>${a.title}</b><p>${a.desc}</p><p style="margin-top:6px;font-size:11px">${got.has(a.id) ? (dates[a.id] ? 'Получено ' + parseDate(dates[a.id]).toLocaleDateString('ru-RU') : 'Получено') : 'Пока закрыто'}</p></div>`).join('')}</div>`; }).join('')}`;
+      <div class="grid">${list.map(a => `<div class="ach tilt rv ${got.has(a.id) ? 'got' : 'locked'}"><span class="ico">${ic(got.has(a.id) ? a.icon : 'lock')}</span><b>${a.title}</b><p>${a.desc}</p><p style="margin-top:6px;font-size:11px">${got.has(a.id) ? (dates[a.id] ? 'Получено ' + new Date(dates[a.id]).toLocaleDateString('ru-RU') : 'Получено') : 'Пока закрыто'}</p></div>`).join('')}</div>`; }).join('')}`;
   animateRings(app);
   $('#reset', app).onclick = async () => {
     if (!confirm('Сбросить всю статистику и достижения? Это нельзя отменить.')) return;
-    try { ME = (await api('/progress', { method: 'DELETE' })).user; S = { ...ME.stats, registered: 1 }; render(); toast('Прогресс сброшен', 'refresh-cw'); }
-    catch (e) { toast(e.message, 'triangle-alert'); }
+    ME.achievements = ME.achievements.filter(a => a.id === 'registered'); S = { registered: 1 };
+    storeProgress(); render(); toast('Прогресс сброшен', 'refresh-cw');
   };
 }
 
@@ -619,114 +636,61 @@ function ai(app) {
   draw();
 }
 
-// ---------- Cloudflare Turnstile ----------
-let tsLoading;
-function loadTurnstile() {
-  if (window.turnstile) return Promise.resolve();
-  return tsLoading ||= new Promise((ok, fail) => {
-    const s = document.createElement('script');
-    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    s.onload = ok; s.onerror = () => { tsLoading = null; fail(new Error('Не удалось загрузить проверку Cloudflare')); };
-    document.head.append(s);
-  });
-}
-function mountTurnstile(el, onToken) {
-  loadTurnstile().then(() => {
-    if (!el.isConnected) return;
-    const id = turnstile.render(el, {
-      sitekey: CONFIG.turnstileSiteKey, language: 'ru', theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
-      callback: onToken, 'expired-callback': () => onToken(''), 'error-callback': () => onToken(''),
-    });
-    cleanups.push(() => { try { turnstile.remove(id); } catch {} });
-    el.reset = () => { onToken(''); try { turnstile.reset(id); } catch {} };
-  }).catch(e => { el.textContent = e.message; });
-}
-
 // ---------- профиль ----------
-function profile(app) { ME ? cabinet(app) : authForm(app, 'register'); }
+function profile(app) { ME ? cabinet(app) : authForm(app, cookie.get('cs_acc') ? 'login' : 'register'); }
 function authForm(app, mode) {
-  const reg = mode === 'register';
-  let tsToken = '';
+  const reg = mode === 'register', saved = cookie.get('cs_acc');
   app.className = '';
-  app.innerHTML = `<section class="hero" style="padding-bottom:20px"><span class="ico" style="width:64px;height:64px;border-radius:20px">${ic('user')}</span><h1 style="font-size:32px;margin-top:14px">Личный кабинет</h1><p>Сохраняй результаты, собирай награды и общайся в ленте</p></section>
+  app.innerHTML = `<section class="hero" style="padding-bottom:20px"><span class="ico" style="width:64px;height:64px;border-radius:20px">${ic('user')}</span><h1 style="font-size:32px;margin-top:14px">Личный кабинет</h1><p>Сохраняй результаты и собирай награды</p></section>
     <div class="card" style="max-width:380px;margin:0 auto"><div class="row" style="margin-bottom:22px;flex-wrap:nowrap"><button class="tab ${reg ? '' : 'on'}" data-m="login" style="flex:1;justify-content:center">ВОЙТИ</button><button class="tab ${reg ? 'on' : ''}" data-m="register" style="flex:1;justify-content:center">РЕГИСТРАЦИЯ</button></div>
     <form id="af" novalidate>
-      ${reg ? `<div class="note">${ic('shield-check')}<span>Мы не спрашиваем почту, телефон и настоящее имя. Придумай никнейм, по которому тебя нельзя узнать.</span></div>` : ''}
-      <label class="field"><span>Никнейм</span><input class="in" name="nick" placeholder="CyberHero" required minlength="3" maxlength="20" autocomplete="username"></label>
+      <div class="note">${ic('cookie')}<span>${reg ? 'Аккаунт хранится только в этом браузере, в куках. На другом устройстве или после очистки кук его не будет. Почту, телефон и настоящее имя мы не спрашиваем.' : saved ? `В этом браузере сохранён аккаунт <b>@${esc(saved.nick)}</b>.` : 'В этом браузере пока нет аккаунта — сначала зарегистрируйся.'}</span></div>
+      <label class="field"><span>Никнейм</span><input class="in" name="nick" placeholder="CyberHero" required minlength="3" maxlength="20" autocomplete="username" value="${reg ? '' : esc(saved?.nick)}"></label>
       ${reg ? '<label class="field"><span>Как тебя называть (необязательно)</span><input class="in" name="display_name" placeholder="Без фамилии" maxlength="30"></label>' : ''}
       <label class="field"><span>Пароль${reg ? ' (не короче 8 символов)' : ''}</span><input class="in" type="password" name="password" required minlength="${reg ? 8 : 1}" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
-      ${reg ? '<label class="consent"><input type="checkbox" name="consent" required><span>Я буду общаться вежливо и не публиковать личные данные. Родители знают, что я регистрируюсь.</span></label>' : ''}
-      <div class="ts" id="ts"></div>
+      ${reg ? '<label class="consent"><input type="checkbox" name="consent" required><span>Я не буду писать в профиле личные данные. Родители знают, что я регистрируюсь.</span></label>' : ''}
       <div class="err" id="aerr"></div>
-      <button class="btn acc" style="width:100%;justify-content:center" id="asub">${reg ? 'Создать аккаунт' : 'Войти'} ${ic('arrow-right')}</button>
+      <button class="btn acc" style="width:100%;justify-content:center">${reg ? 'Создать аккаунт' : 'Войти'} ${ic('arrow-right')}</button>
     </form></div>`;
   $$('[data-m]', app).forEach(b => b.onclick = () => authForm(app, b.dataset.m));
-  const ts = $('#ts', app);
-  mountTurnstile(ts, t => tsToken = t);
   $('#af', app).onsubmit = async e => {
     e.preventDefault();
-    const f = e.target, err = $('#aerr', app);
-    if (!f.reportValidity()) return;
-    if (!tsToken) { err.textContent = 'Подожди, пока пройдёт проверка «Я не робот».'; return; }
-    const body = { ...Object.fromEntries(new FormData(f)), consent: reg ? f.consent.checked : undefined, turnstile: tsToken };
-    $('#asub', app).disabled = true;
-    try {
-      signIn(await api(reg ? '/register' : '/login', { body }));
-      if (reg) { confetti(); toast('Аккаунт создан! Первая награда уже твоя.', 'user'); } else toast('С возвращением, ' + ME.nick + '!', 'user');
-      render();
-    } catch (er) { err.textContent = er.message; ts.reset?.(); $('#asub', app).disabled = false; }
+    const f = e.target, err = m => { $('#aerr', app).textContent = m; };
+    const nick = f.nick.value.trim(), pw = f.password.value;
+    if (reg) {
+      if (!/^[\p{L}\d_.-]{3,20}$/u.test(nick)) return err('Никнейм: от 3 до 20 символов — буквы, цифры, _ . -');
+      if (pw.length < 8) return err('Пароль должен быть не короче 8 символов');
+      if (pw.toLowerCase() === nick.toLowerCase() || ['12345678', '123456789', 'qwertyui', 'password'].includes(pw)) return err('Этот пароль слишком простой — придумай другой');
+      if (!f.consent.checked) return err('Нужно согласие с правилами и разрешение родителей');
+      if (saved && !confirm(`В этом браузере уже есть аккаунт @${saved.nick}. Заменить его? Его прогресс пропадёт.`)) return;
+      ME = { nick, display_name: f.display_name.value.trim(), bio: '', created_at: Date.now(), achievements: [] };
+      S = { registered: 1 };
+      storeProfile(await hashPw(nick, pw));
+    } else if (!saved || saved.nick.toLowerCase() !== nick.toLowerCase() || saved.pw !== await hashPw(saved.nick, pw)) {
+      return err(saved ? 'Неверный никнейм или пароль' : 'В этом браузере нет такого аккаунта. Зарегистрируйся.');
+    }
+    cookie.set('cs_in', 1);
+    if (reg) { save(); toast('Аккаунт создан!', 'user'); } else { loadAccount(); toast('С возвращением, ' + ME.nick + '!', 'user'); }
+    updateNav(); render();
   };
 }
-function cabinet(app, tab = 'feed') {
+function cabinet(app, tab = 'ach') {
   const got = ACHIEVEMENTS.filter(a => gotIds().has(a.id));
   app.innerHTML = `<div class="prof"><div class="card" style="text-align:center;padding:24px 16px">
       <div class="avatar">${esc((ME.display_name || ME.nick)[0].toUpperCase())}</div>
       <h2 style="font-size:22px;margin-top:12px">${esc(ME.display_name || ME.nick)}</h2><div class="c-acc" style="font:13px var(--mono)">@${esc(ME.nick)}</div>
       ${ME.bio ? `<p class="muted" style="font-size:14px">${esc(ME.bio)}</p>` : ''}
-      <div class="mini"><div><b>${S.best || 0}</b>Рекорд</div><div><b>${got.length}</b>Наград</div><div><b id="pc">–</b>Записей</div></div>
+      <div class="mini"><div><b>${S.best || 0}</b>Рекорд</div><div><b>${got.length}</b>Наград</div><div><b>${S.games || 0}</b>Игр</div></div>
       <div>${got.slice(-3).map(a => `<span class="badge">${ic(a.icon)} ${a.title}</span>`).join('')}</div>
-      <p class="muted" style="font:12px var(--mono)">С нами с ${parseDate(ME.created_at).toLocaleDateString('ru-RU')}</p>
+      <p class="muted" style="font:12px var(--mono)">С нами с ${new Date(ME.created_at).toLocaleDateString('ru-RU')}</p>
       <div style="display:grid;gap:8px"><button class="btn sm" data-t="settings">${ic('pencil')} Изменить</button>
-      <button class="btn sm" id="inc">${ic('venetian-mask')} Инкогнито: ${ME.incognito ? 'вкл' : 'выкл'}</button>
       <button class="btn sm danger" id="out">${ic('log-out')} Выйти</button></div></div>
-    <div><div class="row" style="margin-bottom:16px">${[['feed', 'messages-square', 'Лента'], ['mine', 'pen-line', 'Мои записи'], ['ach', 'trophy', 'Награды'], ['stats', 'target', 'Статистика'], ['settings', 'pencil', 'Настройки']].map(([k, i, l]) => `<button class="tab ${k === tab ? 'on' : ''}" data-t="${k}">${ic(i)} ${l}</button>`).join('')}</div>
+    <div><div class="row" style="margin-bottom:16px">${[['ach', 'trophy', 'Награды'], ['stats', 'target', 'Статистика'], ['settings', 'pencil', 'Настройки']].map(([k, i, l]) => `<button class="tab ${k === tab ? 'on' : ''}" data-t="${k}">${ic(i)} ${l}</button>`).join('')}</div>
       <div id="pbody"></div></div></div>`;
   $$('[data-t]', app).forEach(b => b.onclick = () => cabinet(app, b.dataset.t));
-  $('#inc', app).onclick = async () => {
-    try { ME = { ...ME, ...(await api('/me', { body: { incognito: !ME.incognito } })).user }; toast(ME.incognito ? 'Твои записи видны как «Аноним»' : 'Инкогнито выключено', 'venetian-mask'); cabinet(app, tab); }
-    catch (e) { toast(e.message, 'triangle-alert'); }
-  };
-  $('#out', app).onclick = async () => { await api('/logout', { method: 'POST' }).catch(() => {}); signOutLocal(); location.hash = '#/'; render(); };
+  $('#out', app).onclick = () => { signOut(); location.hash = '#/'; render(); };
   const body = $('#pbody', app);
 
-  if (tab === 'feed' || tab === 'mine') {
-    body.innerHTML = `<div class="card"><form id="pf"><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><span class="avatar" style="width:34px;height:34px;font-size:15px;margin:0;flex:none">${esc(ME.nick[0].toUpperCase())}</span>
-      <textarea class="in" name="text" rows="3" maxlength="300" placeholder="Поделись советом о безопасности в интернете..." required></textarea></div>
-      <div class="row" style="justify-content:space-between;margin-top:10px"><span class="tag">#КиберПраво</span><button class="btn acc sm">Опубликовать ${ic('send')}</button></div>
-      <p class="muted" style="font-size:12px;margin:10px 0 0">${ic('shield-check')} Пиши вежливо. Телефоны, почта и ссылки не публикуются. Неприятную запись можно отметить флажком — после трёх жалоб она скроется.</p></form></div><div id="posts"><p class="muted">Загрузка…</p></div>`;
-    const load = async () => {
-      try {
-        const { posts } = await api('/posts');
-        const mine = posts.filter(p => p.mine);
-        const pc = $('#pc', app); if (pc) pc.textContent = mine.length;
-        const list = tab === 'mine' ? mine : posts;
-        $('#posts', app).innerHTML = list.length ? list.map(p => `<div class="card post"><div class="post-head"><span class="av">${esc(p.author[0].toUpperCase())}</span><b>@${esc(p.author)}</b><time>${fmtDate(p.created_at)}</time></div>
-          <p>${esc(p.text)}</p><span class="tag">#КиберПраво</span>
-          <div class="row" style="margin-top:8px;gap:6px"><button class="act ${p.liked ? 'on' : ''}" data-l="${p.id}">${ic('heart')} ${p.likes}</button>
-          ${p.mine || ME.is_admin ? `<button class="act" data-d="${p.id}" style="margin-left:auto">${ic('trash-2')} Удалить</button>` : `<button class="act" data-rep="${p.id}" style="margin-left:auto" ${p.reported ? 'disabled' : ''}>${ic('flag')} ${p.reported ? 'Жалоба отправлена' : 'Пожаловаться'}</button>`}</div></div>`).join('')
-          : `<div class="card muted" style="text-align:center">${tab === 'mine' ? 'У тебя пока нет записей.' : 'Пока нет записей. Будь первым!'}</div>`;
-        $$('[data-l]', app).forEach(b => b.onclick = async () => { await api(`/posts/${b.dataset.l}/like`, { method: 'POST' }).catch(e => toast(e.message, 'triangle-alert')); load(); });
-        $$('[data-rep]', app).forEach(b => b.onclick = async () => { if (confirm('Пожаловаться на эту запись?')) { await api(`/posts/${b.dataset.rep}/report`, { method: 'POST' }).catch(e => toast(e.message, 'triangle-alert')); toast('Спасибо! Жалоба отправлена.', 'flag'); load(); } });
-        $$('[data-d]', app).forEach(b => b.onclick = async () => { if (confirm('Удалить запись?')) { await api(`/posts/${b.dataset.d}`, { method: 'DELETE' }).catch(e => toast(e.message, 'triangle-alert')); load(); } });
-      } catch (e) { $('#posts', app).innerHTML = `<div class="card err">${esc(e.message)}</div>`; }
-    };
-    $('#pf', app).onsubmit = async e => {
-      e.preventDefault();
-      try { await api('/posts', { body: { text: e.target.text.value } }); e.target.reset(); bump('posts'); load(); }
-      catch (er) { toast(er.message, 'triangle-alert'); }
-    };
-    load();
-  }
   if (tab === 'ach') body.innerHTML = got.length ? `<div class="grid">${got.map(a => `<div class="ach got tilt"><span class="ico">${ic(a.icon)}</span><b>${a.title}</b><p>${a.desc}</p></div>`).join('')}</div>` : `<div class="card muted">Пока нет наград — <a href="#/quiz">сыграй в квиз</a>!</div>`;
   if (tab === 'stats') body.innerHTML = statCards([
     [S.games || 0, 'Игр сыграно', 'c-acc'], [S.best || 0, 'Рекорд квиза', 'c-ok'], [accuracy(), 'Точность', '', '%'], [S.answered || 0, 'Ответов'],
@@ -736,10 +700,11 @@ function cabinet(app, tab = 'feed') {
       <label class="field"><span>О себе</span><textarea class="in" name="bio" rows="3" maxlength="200" placeholder="Например: люблю головоломки">${esc(ME.bio)}</textarea></label>
       <p class="muted" style="font-size:12px">Не пиши фамилию, адрес, номер школы и телефон.</p>
       <button class="btn acc sm">${ic('circle-check')} Сохранить</button></form></div>`;
-    $('#sf', app).onsubmit = async e => {
+    $('#sf', app).onsubmit = e => {
       e.preventDefault();
-      try { ME = { ...ME, ...(await api('/me', { body: Object.fromEntries(new FormData(e.target)) })).user }; toast('Профиль сохранён', 'circle-check'); cabinet(app, 'settings'); }
-      catch (er) { toast(er.message, 'triangle-alert'); }
+      ME.display_name = e.target.display_name.value.trim(); ME.bio = e.target.bio.value.trim();
+      if (storeProfile()) toast('Профиль сохранён', 'circle-check'); else toast('Слишком длинный текст для куки', 'triangle-alert');
+      cabinet(app, 'settings');
     };
   }
 }
@@ -790,7 +755,7 @@ themeBtn.onclick = () => {
 // ---------- запуск ----------
 (async function boot() {
   syncThemeBtn();
+  loadAccount();
   try { CONFIG = { ...CONFIG, ...(await api('/config')) }; } catch {}
-  if (token()) { try { const { user } = await api('/me'); ME = user; S = { ...user.stats, registered: 1 }; } catch {} }
   updateNav(); render();
 })();
