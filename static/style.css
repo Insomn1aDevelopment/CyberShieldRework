@@ -346,6 +346,24 @@ input.in:focus,textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 3px
 .toast.out{transition:.25s;opacity:0;transform:translateX(24px)}
 @keyframes toast{from{opacity:0;transform:translateX(24px)}}
 
+/* ---------- тренажёр сценариев: симуляции браузера, почты и мессенджера ---------- */
+.sim{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card2);overflow:hidden;margin-bottom:20px;font-size:15px}
+.sim-bar{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--card)}
+.sim-bar>i{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none}
+.sim-bar>span{flex:1;min-width:0;margin-left:6px;font:500 13px var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.sim mark{background:var(--bad-soft);color:var(--bad);border-radius:3px;padding:0 2px}
+.sim-body{padding:14px 16px}
+.sim-mail{display:grid;gap:4px;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.sim-mail span{color:var(--muted);margin-right:8px;font:600 12px var(--mono);text-transform:uppercase}
+.sim.chat,.msg-thread{display:flex;flex-direction:column;gap:8px}
+.sim.chat{padding:14px}
+.msg-bubble{max-width:85%;padding:10px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);overflow-wrap:anywhere}
+.msg-bubble.them{align-self:flex-start;border-bottom-left-radius:4px}
+.msg-bubble.me{align-self:flex-end;border-bottom-right-radius:4px;background:var(--accent-soft)}
+.msg-sender{font:600 12px var(--mono);color:var(--accent);margin-bottom:2px}
+.msg-link{color:var(--bad);text-decoration:underline;overflow-wrap:anywhere}
+.msg-note{font-size:13px;color:var(--muted)}
+
 /* ---------- найди подвох ---------- */
 .spot{max-width:560px;margin:0 auto}
 .spot-msg{margin-bottom:14px}
