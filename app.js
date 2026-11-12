@@ -112,7 +112,7 @@ function updateNav() {
 // ---------- роутер ----------
 let timer = null, cleanups = [];
 const stopTimer = () => { clearInterval(timer); timer = null; };
-const routes = { '': home, quiz, detective, sort, survival, spot, kb, tips, password, uk, constitution, achievements, profile };
+const routes = { '': home, quiz, trainer, detective, sort, survival, spot, kb, tips, password, uk, constitution, achievements, profile };
 const WIDE = ['profile', 'achievements'];
 
 function render() {
@@ -139,6 +139,7 @@ const accuracy = () => S.answered ? Math.round(S.correct / S.answered * 100) : 0
 // ---------- главная ----------
 const HOME_PLAY = [
   ['target', 'Квиз-тренажёр', () => `${QUESTIONS.length} вопросов, три уровня сложности`, 'quiz'],
+  ['shield-alert', 'Тренажёр сценариев', () => `${SCENARIOS.length} сценариев: письма, сайты и переписки`, 'trainer'],
   ['search', 'Кибер-детектив', () => `${CASES.length} дел по реальным схемам мошенников`, 'detective'],
   ['layers', 'Кибер-сортировка', () => 'Разложи ситуации на безопасные и опасные', 'sort'],
   ['infinity', 'На выживание', () => 'Правда или ложь на скорость, три жизни', 'survival'],
@@ -482,6 +483,112 @@ function survival(app) {
       big: score, sub: 'очков', pct: Math.min(100, score / 50 * 100),
       stats: [[score, 'Верных ответов', 'c-ok'], [limit.toFixed(1) + ' с', 'Темп', 'c-acc'], ...(ME ? [[S.survBest, 'Рекорд']] : [])],
       msg: ME && score > prev ? 'Новый рекорд!' : score >= 20 ? 'Крепкий щит!' : 'Попробуй ещё раз и продержись дольше.',
+    });
+    $('#again', app).onclick = start;
+  };
+  intro();
+}
+
+// ---------- тренажёр сценариев: симуляции браузера, почты и мессенджера, 3 жизни, 20 секунд на ответ ----------
+const RANKS = [[95, 'S', 'Кибер-легенда', 'Исключительный результат! Ты настоящий эксперт кибербезопасности.'], [80, 'A', 'Кибер-агент', 'Отлично! Ты хорошо разбираешься в угрозах интернета.'],
+  [65, 'B', 'Цифровой страж', 'Неплохо! Есть пространство для роста — учись на ошибках.'], [50, 'C', 'Стажёр', 'Средний результат. Повтори сложные категории ещё раз!'],
+  [0, 'D', 'Новичок в сети', 'Не расстраивайся — теперь ты знаешь об угрозах больше, чем раньше!']];
+const sim = q => {
+  const bar = (icon, text) => `<div class="sim-bar"><i></i><i></i><i></i><span>${ic(icon)} ${text}</span></div>`;
+  if (q.k === 'browser') return `<div class="sim">${bar('lock', esc(q.url).replace(esc(q.hl || q.url), m => `<mark>${m}</mark>`))}<div class="sim-body">${q.html}</div></div>`;
+  if (q.k === 'email') return `<div class="sim">${bar('mail', 'Входящие')}<div class="sim-body"><div class="sim-mail"><div><span>От:</span><mark>${esc(q.from)}</mark></div><div><span>Тема:</span>${esc(q.subj)}</div></div>${q.html}</div></div>`;
+  return `<div class="sim chat">${q.html}</div>`;
+};
+function trainer(app) {
+  const TIME = 20, KIND = { browser: 'Браузер', email: 'Почта', message: 'Мессенджер' };
+  let cat = 'all', quick = true, st;
+  const quit = () => { stopTimer(); document.onkeydown = null; intro(); };
+  const intro = () => {
+    const cats = [{ id: 'all', name: 'Все угрозы', desc: 'Полный тренинг по всем категориям', color: 'var(--accent)' }, ...SC_CATS];
+    app.innerHTML = gameIntro({
+      icon: 'shield-alert', kicker: 'Тренажёр сценариев', title: 'Разберись, кто играет против тебя',
+      sub: `${SCENARIOS.length} сценариев: письма, сайты и переписки, как в жизни. Отличи нормальное поведение от манипуляции.`,
+      best: S.trainBest || 0,
+      body: `<div class="label" style="margin-top:0">Категория угроз</div>
+        <div class="diffs">${cats.map(c => `<button class="diff ${c.id === cat ? 'on' : ''}" data-c="${c.id}" style="--c:${c.color}"><b>${esc(c.name)}</b><small>${esc(c.desc)} · ${c.id === 'all' ? SCENARIOS.length : SCENARIOS.filter(q => q.c === c.id).length}</small></button>`).join('')}</div>
+        <div class="label">Длина тренировки</div>
+        <div class="diffs">${[[true, 'Быстрые 15', '15 случайных сценариев'], [false, 'Все сценарии', 'Вся выбранная категория']].map(([v, t, d]) => `<button class="diff ${v === quick ? 'on' : ''}" data-q="${v}" style="--c:var(--accent)"><b>${t}</b><small>${d}</small></button>`).join('')}</div>`,
+      rules: [['timer', `${TIME} секунд на ответ — быстрый ответ даёт больше очков`], ['heart', 'Три жизни — ошибка отнимает одну'], ['flame', 'Серия верных ответов даёт бонус'], ['keyboard', 'Клавиши 1–4 для ответа']],
+    });
+    $$('[data-c]', app).forEach(b => b.onclick = () => { cat = b.dataset.c; $$('[data-c]', app).forEach(x => x.classList.toggle('on', x === b)); });
+    $$('[data-q]', app).forEach(b => b.onclick = () => { quick = b.dataset.q === 'true'; $$('[data-q]', app).forEach(x => x.classList.toggle('on', x === b)); });
+    $('#go', app).onclick = start;
+  };
+  const start = () => {
+    const pool = shuffle(cat === 'all' ? SCENARIOS : SCENARIOS.filter(q => q.c === cat));
+    st = { qs: quick ? pool.slice(0, 15) : pool, i: 0, score: 0, lives: 3, streak: 0, maxStreak: 0, correct: 0, res: [], wrong: [], t0: Date.now() };
+    ask();
+  };
+  const ask = () => {
+    const { qs, i } = st, q = qs[i], c = SC_CATS.find(x => x.id === q.c);
+    let left = TIME, answered = false; const t0 = Date.now();
+    const order = shuffle(q.o.map((text, idx) => ({ text, idx })));
+    app.innerHTML = hud([`${ic('list-ordered')} ${i + 1}/${qs.length}`, `<span class="streak ${st.streak >= 3 ? 'hot' : ''}">${ic('flame')} ${st.streak}</span>`, `<span id="sc">${ic('star')} ${st.score}</span>`,
+      `<span class="hearts">${[0, 1, 2].map(k => `<i data-lucide="heart" class="${k < st.lives ? '' : 'lost'}"></i>`).join('')}</span>`, `<span id="left">${ic('timer')} ${left}</span>`]) + `
+      <div class="card play">${qs.length <= 30 ? steps(qs.length, i, st.res) : `<div class="progress"><div style="width:${i / qs.length * 100}%"></div></div>`}
+      <div class="timer" id="tm"><div id="bar" style="width:100%"></div></div>
+      <div class="qbar"><span>${ic(c.icon)} ${esc(c.name)}</span><span>${KIND[q.k]}</span></div>
+      ${sim(q)}
+      <p class="question">${esc(q.q)}</p>
+      <div class="opts">${order.map((o, k) => `<button class="opt" data-i="${o.idx}"><kbd>${k + 1}</kbd><span>${esc(o.text)}</span></button>`).join('')}</div>
+      <div id="after"></div></div>`;
+    $('#quit', app).onclick = quit;
+    const finish = picked => {
+      if (answered) return; answered = true;
+      stopTimer();
+      const ok = picked === q.a;
+      st.res.push(ok);
+      $$('.opt', app).forEach(b => { b.disabled = true; const n = +b.dataset.i; if (n === q.a) b.classList.add('ok'); else if (n === picked) b.classList.add('bad', 'shake'); });
+      let head;
+      if (ok) {
+        const pts = 100 + st.streak * 20 + left * 5;
+        st.score += pts; st.streak++; st.correct++; st.maxStreak = Math.max(st.maxStreak, st.streak);
+        if (st.streak >= 3) toast(`Серия ×${st.streak}`, 'flame');
+        const sc = $('#sc', app); sc.innerHTML = ic('star') + ' ' + st.score; sc.classList.add('pop');
+        head = `${ic('circle-check')} Верно! +${pts}`;
+      } else {
+        st.streak = 0; st.lives--; st.wrong.push(q);
+        $$('.hearts svg', app)[st.lives]?.classList.add('lost');
+        head = picked === -1 ? `${ic('timer')} Время вышло` : `${ic('circle-x')} Неверно`;
+      }
+      const last = st.i + 1 >= qs.length || !st.lives;
+      $('#after', app).innerHTML = `<div class="explain ${ok ? 'is-ok' : 'is-bad'}"><b>${head}</b> ${esc(q.e)}</div>
+        <div class="explain"><b>${ic('lightbulb')} Совет:</b> ${esc(q.tip)}</div>
+        ${st.lives ? '' : `<div class="explain is-bad"><b>${ic('heart-crack')} Жизни закончились!</b></div>`}
+        <button class="btn dark sm" id="next" style="margin-top:14px">${last ? 'Результат' : 'Дальше'}</button>`;
+      $('#next', app).onclick = () => { st.i++; last ? end() : ask(); };
+      $('#next', app).focus();
+    };
+    $$('.opt', app).forEach(b => b.onclick = () => finish(+b.dataset.i));
+    document.onkeydown = e => { const b = $$('.opt', app)[+e.key - 1]; if (b && !b.disabled) finish(+b.dataset.i); };
+    timer = setInterval(() => {
+      left = Math.max(0, TIME - Math.floor((Date.now() - t0) / 1000));
+      $('#left', app).innerHTML = ic('timer') + ' ' + left;
+      $('#bar', app).style.width = (left / TIME * 100) + '%';
+      $('#tm', app).classList.toggle('low', left <= 5);
+      if (!left) finish(-1);
+    }, 250);
+  };
+  const end = () => {
+    document.onkeydown = null;
+    const ratio = st.correct / st.qs.length, secs = Math.round((Date.now() - st.t0) / 1000);
+    const [, rank, title, sub] = RANKS.find(([min]) => ratio * 100 >= min);
+    S.games = (S.games || 0) + 1; S.trainBest = Math.max(S.trainBest || 0, st.score);
+    S.modes = [...new Set([...(S.modes || []), 'trainer'])];
+    save();
+    if (ratio >= .8) confetti();
+    app.innerHTML = resultScreen({
+      big: st.score, sub: 'очков', pct: ratio * 100,
+      stats: [[st.correct, 'Верно', 'c-ok'], [st.wrong.length, 'Ошибок', 'c-bad'], [st.maxStreak, 'Макс. серия'], [secs + ' с', 'Время', 'c-acc'], ...(ME ? [[S.trainBest, 'Рекорд']] : [])],
+      msg: `<b>Ранг ${rank} — ${title}.</b> ${sub}`,
+      extra: `<div style="text-align:left"><div class="label">Что закрепить</div>${st.wrong.length
+        ? st.wrong.slice(0, 3).map(q => `<div class="explain"><b>${esc(q.t)}:</b> ${esc(q.tip)}</div>`).join('')
+        : `<div class="explain is-ok"><b>${ic('trophy')} Идеальный результат!</b> Ты правильно ответил на все вопросы.</div>`}</div>`,
     });
     $('#again', app).onclick = start;
   };
