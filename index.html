@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>КиберЩит</title>
+<meta name="description" content="Игры и задания о безопасности в интернете для детей и подростков">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b5cf0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap">
+<link rel="stylesheet" href="style.css?v=3">
+<script src="theme.js?v=3"></script>
+</head>
+<body>
+<canvas id="rain" aria-hidden="true"></canvas>
+<button id="theme" class="theme-btn" type="button"></button>
+
+<header class="nav">
+  <a href="#/" class="logo"><span class="logo-tile"><i data-lucide="shield-check"></i></span><span>КиберЩит</span></a>
+  <nav>
+    <a href="#/" data-r=""><i data-lucide="house"></i>Главная</a>
+    <div class="dd"><button data-r="quiz trainer detective sort survival spot" aria-haspopup="true"><i data-lucide="gamepad-2"></i>Игры</button>
+      <div class="dd-menu">
+        <a href="#/quiz"><i data-lucide="target"></i>Квиз-тренажёр</a><a href="#/trainer"><i data-lucide="shield-alert"></i>Тренажёр сценариев</a><a href="#/detective"><i data-lucide="search"></i>Кибер-детектив</a>
+        <a href="#/sort"><i data-lucide="layers"></i>Кибер-сортировка</a><a href="#/survival"><i data-lucide="infinity"></i>На выживание</a><a href="#/spot"><i data-lucide="scan-eye"></i>Найди подвох</a>
+      </div></div>
+    <div class="dd"><button data-r="kb tips password uk constitution" aria-haspopup="true"><i data-lucide="book-open"></i>База</button>
+      <div class="dd-menu">
+        <a href="#/kb"><i data-lucide="book-open"></i>База знаний</a><a href="#/tips"><i data-lucide="lightbulb"></i>Советы</a><a href="#/password"><i data-lucide="key-round"></i>Проверка пароля</a>
+        <a href="#/uk"><i data-lucide="gavel"></i>Уголовный кодекс</a><a href="#/constitution"><i data-lucide="scroll-text"></i>Конституция</a>
+      </div></div>
+    <a href="#/achievements" data-r="achievements" id="navAch"><i data-lucide="trophy"></i>Достижения</a>
+    <a href="#/profile" data-r="profile" id="navProfile"><i data-lucide="user"></i><span>Войти</span></a>
+  </nav>
+</header>
+
+<main id="app"></main>
+<footer class="foot">КиберЩит — проект Дудукалова Вячеслава Витальевича и Минчука Егора Сергеевича, группа 45тп, ГГКТТиД, Гродно</footer>
+<div id="toasts" aria-live="polite"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script src="vendor/lucide.min.js"></script>
+<script src="data.js?v=3"></script>
+<script src="app.js?v=3"></script>
+</body>
+</html>
